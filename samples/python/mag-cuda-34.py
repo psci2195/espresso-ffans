@@ -80,7 +80,7 @@ k_f = 1.1
 
 # The large particles fraction \cite{Ivanov1996}
 #PHI_l = 7.5E-2
-PHI_l = 0.5
+PHI_l = 0.9
 
 #[m] the mean nanoparticle diameter. Hard part: a ferromagnetic core & double nonmagnetic surface
 d_small_hard = 11.5E-9
@@ -133,7 +133,7 @@ gamma0 = 3*pi*eta_car*pow(SIGMA,2)/math.sqrt(M0*kb*T)
 # setmd time_step [expr 0.05]
 
 es.time_step = 5E-2
-n_part = 500
+n_part = 200
 
 #H_ext_Oe = 500.0
 H_ext_Oe = 0.0
@@ -246,7 +246,7 @@ else:
 #anykey
 cap = 1
 for cap in range(200):
-    print 't={0} E={1}'.format(es.time_step,es.analysis.energy(es)["ideal"])
+    print 't={0} E={1}'.format(es.time,es.analysis.energy(es)["ideal"])
 #    es.inter(individual = cap) 
     es.non_bonded_inter.set_force_cap(cap)
     es.integrator.run(20)
@@ -257,7 +257,7 @@ es.non_bonded_inter.set_force_cap(0)
 
 for i in range(5):
     temp = es.analysis.energy()["ideal"] /((deg_free/2.0)*n_part)
-    print 't={0} E={1} , T={2}")'.format(es.time_step,es.analysis.energy()["total"],temp)
+    print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
     es.integrator.run(10)
 
 #imd positions  
@@ -290,7 +290,7 @@ t.daemon = True
 
 while(i<j):
     temp = es.analysis.energy()["ideal"]/((deg_free/2.0)*n_part)
-    print 't={0} E={1} , T={2}")'.format(es.time_step,es.analysis.energy()["total"],temp)
+    print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
 #puts "t=[setmd time] E=[analyze energy total], T=$temp"
 #puts "t=[setmd time] dipm=[observable $dipm_obs print]"
    # H_demag = 0.0
@@ -306,7 +306,7 @@ while(i<j):
 #############################################integrate 10 reuse_forces?
 #imd positions 
 
-print '{0},{1},{2},{3}'.format('[clock seconds]',es.time_step,Mz,temp)
+print '{0},{1},{2},{3}'.format('[clock seconds]',es.time,Mz,temp)
 
 
 #imd disconnect 
