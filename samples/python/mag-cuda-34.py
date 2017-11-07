@@ -35,7 +35,20 @@ es = espressomd.System()
 #Constants - math
 pi = 3.14159
 
-
+def vectMult(Ax, Ay, Az, Bx, By, Bz , argument):
+    x = (Ay*Bz) - (Az*By)
+    y = (-1)*((Ax*Bz) - (Az*Bx))
+    z = (Ax*By) - (Ay*Bx)
+    if(argument == 'x'):
+        return x
+    if(argument == 'y'):
+        return y
+    if(argument == 'z'):
+        return z
+    else:
+        print ("argument can not be " + argument)
+        return 0
+    
 #[Si] Constants - physics
 Na = 6.022E23
 mu0 = 4.0 * pi * 1E-7
@@ -52,6 +65,9 @@ eta_car = 0.00164
 #[J] Hamaker constant
 A_h = 4.0E-20
 T = 300.0
+Hx = 0
+Hy = 0
+Hz = 2000 #Oersted
 
 #Nanoparticle
 #[m] magnetite unit cell size - a cubic spinel structure with space group Fd3m (above the Verwey temperature) \cite{Fleer1981}
@@ -287,8 +303,30 @@ def main_tread():
         visualizer.update()
 t = Thread(target = main_tread)
 t.daemon = True
+###########################
+#dawaanr-and-dds-gpu.py 53#
+###########################
+#dipole_modulus = 1.3
+#l = 15
+#part_dip = np.zeros((3))
+#for i1 in range(n_part):
+#    part_pos = np.array(random(3)) * l
+#    costheta = 2 * random() - 1
+#    sintheta = np.sin(np.arcsin(costheta))
+#    phi = 2 * np.pi * random()
+#    part_dip[0] = sintheta * np.cos(phi) * dipole_modulus
+#    part_dip[1] = sintheta * np.sin(phi) * dipole_modulus
+#    part_dip[2] = costheta * dipole_modulus
+#    es.part.add(id=i1, type=0, pos=part_pos, dip=part_dip, v=np.array([0, 0, 0]), omega_body=np.array([0, 0, 0]))
+
 
 while(i<j):
+    for n in range(n_part):
+        x_ext_torque = vectMult(es.part[n].ext_torque[0],es.part[n].ext_torque[1],es.part[n].ext_torque[2],Hx,Hy,Hz,'x')
+        y_ext_torque = vectMult(es.part[n].ext_torque[0],es.part[n].ext_torque[1],es.part[n].ext_torque[2],Hx,Hy,Hz,'y')
+        z_ext_torque = vectMult(es.part[n].ext_torque[0],es.part[n].ext_torque[1],es.part[n].ext_torque[2],Hx,Hy,Hz,'z') 
+        es.part[n].ext_torque = np.array([x_ext_torque,y_ext_torque,z_ext_torque])
+
     temp = es.analysis.energy()["ideal"]/((deg_free/2.0)*n_part)
     print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
 #puts "t=[setmd time] E=[analyze energy total], T=$temp"
@@ -296,9 +334,9 @@ while(i<j):
    # H_demag = 0.0
 #set H_demag [expr -[lindex [ observable $dipm_obs print ] 2]/$V_carr ]
    # Mz = [lindex( observable ,dipm_obs ), 2]/V_carr
-   # H_mag = ((H_ext_Oe*Oe_to_Am)/H0+H_demag)
+   #  H_mag = ((H_ext_Oe*Oe_to_Am)/H0+H_demag)
    # es.constraint.add(ext_magn_field, 0, 0, H_mag)
-
+    
     es.integrator.run(steps = 10,recalc_forces = False)
     i=+1
     t.start()
