@@ -35,20 +35,6 @@ es = espressomd.System()
 #Constants - math
 pi = 3.14159
 
-def vectMult(Ax, Ay, Az, Bx, By, Bz , argument):
-    x = (Ay*Bz) - (Az*By)
-    y = (-1)*((Ax*Bz) - (Az*Bx))
-    z = (Ax*By) - (Ay*Bx)
-    if(argument == 'x'):
-        return x
-    if(argument == 'y'):
-        return y
-    if(argument == 'z'):
-        return z
-    else:
-        print ("argument can not be " + argument)
-        return 0
-    
 #[Si] Constants - physics
 Na = 6.022E23
 mu0 = 4.0 * pi * 1E-7
@@ -67,7 +53,7 @@ A_h = 4.0E-20
 T = 300.0
 Hx = 0
 Hy = 0
-Hz = 2000 #Oersted
+Hz = 2000 #Oersted 
 
 #Nanoparticle
 #[m] magnetite unit cell size - a cubic spinel structure with space group Fd3m (above the Verwey temperature) \cite{Fleer1981}
@@ -178,7 +164,9 @@ coord_shift = 0.1*start_lattice_a
 posx = coord_shift
 posy = coord_shift
 posz = coord_shift
-
+dipole_modulus = 1.3
+part_dip = np.zeros((3))
+l = 15
 for i in range(n_part):
     rnd_val_for_p_type = random()
     costheta = 2* random() - 1
@@ -195,23 +183,33 @@ for i in range(n_part):
                     print("Not enough box_l for particles!")
 
     if rnd_val_for_p_type < PHI_l:
-        dx = 0.0
-        dy = 0.0
-        dz = 1.0 * (m_l/m0)
+        part_pos = np.array(random(3)) * l
+        costheta = 2 * random() - 1
+        sintheta = np.sin(np.arcsin(costheta))
+        #dx = part_dip[0], dy = part_dip[1] dz = part_dip[2]
+        phi = 2 * np.pi * random()
+        part_dip[0] = sintheta * np.cos(phi) * dipole_modulus
+        part_dip[1] = sintheta * np.sin(phi) * dipole_modulus
+        part_dip[2] = costheta * dipole_modulus
         massval_large = M_l/M0
         I_val_large =I_large/(M0*pow(SIGMA,2))
         gamma_tr_val_large = gamma0*d_l_hydrod/SIGMA
         gamma_rot_val_large = gamma0*pow(d_l_hydrod/SIGMA,3.0)/3.0
-        es.part.add(type = 1, id = i, mass = massval_large, rinertia = I_val_large, pos = [posx, posy, posz],dip = [dx, dy, dz], gamma = gamma_tr_val_large, gamma_rot = gamma_rot_val_large)
+        es.part.add(type = 1, id = i, mass = massval_large, rinertia = I_val_large, pos = [posx, posy, posz],dip = part_dip, gamma = gamma_tr_val_large, gamma_rot = gamma_rot_val_large)
     else:
-        dx = 0.0
-        dy = 0.0
-        dz = 1.0 * (m_small/m0)
+        part_pos = np.array(random(3)) * l
+        costheta = 2 * random() - 1
+        sintheta = np.sin(np.arcsin(costheta))
+        #dx = part_dip[0], dy = part_dip[1] dz = part_dip[2]
+        phi = 2 * np.pi * random()
+        part_dip[0] = sintheta * np.cos(phi) * dipole_modulus
+        part_dip[1] = sintheta * np.sin(phi) * dipole_modulus
+        part_dip[2] = costheta * dipole_modulus
         massval_small = 1.0
         I_val_small = I_small/(M0*pow(SIGMA,2))
         gamma_tr_val_small = gamma0*1.0
         gamma_rot_val_small = gamma0*1.0/3.0
-        es.part.add(type = 0, id = i, mass = massval_small, rinertia = I_val_small, pos = [posx, posy, posz],dip = [dx, dy, dz], gamma = gamma_tr_val_small, gamma_rot = gamma_rot_val_small)
+        es.part.add(type = 0, id = i, mass = massval_small, rinertia = I_val_small, pos = [posx, posy, posz],dip = part_dip, gamma = gamma_tr_val_small, gamma_rot = gamma_rot_val_small)
 
 print( "=====================")
 print( "Temporal parameters")
@@ -303,30 +301,11 @@ def main_tread():
         visualizer.update()
 t = Thread(target = main_tread)
 t.daemon = True
-###########################
-#dawaanr-and-dds-gpu.py 53#
-###########################
-#dipole_modulus = 1.3
-#l = 15
-#part_dip = np.zeros((3))
-#for i1 in range(n_part):
-#    part_pos = np.array(random(3)) * l
-#    costheta = 2 * random() - 1
-#    sintheta = np.sin(np.arcsin(costheta))
-#    phi = 2 * np.pi * random()
-#    part_dip[0] = sintheta * np.cos(phi) * dipole_modulus
-#    part_dip[1] = sintheta * np.sin(phi) * dipole_modulus
-#    part_dip[2] = costheta * dipole_modulus
-#    es.part.add(id=i1, type=0, pos=part_pos, dip=part_dip, v=np.array([0, 0, 0]), omega_body=np.array([0, 0, 0]))
-
-
+H = np.array([Hx,Hy,((Hz*Oe_to_Am)/H0)])
 while(i<j):
     for n in range(n_part):
-        x_ext_torque = vectMult(es.part[n].ext_torque[0],es.part[n].ext_torque[1],es.part[n].ext_torque[2],Hx,Hy,Hz,'x')
-        y_ext_torque = vectMult(es.part[n].ext_torque[0],es.part[n].ext_torque[1],es.part[n].ext_torque[2],Hx,Hy,Hz,'y')
-        z_ext_torque = vectMult(es.part[n].ext_torque[0],es.part[n].ext_torque[1],es.part[n].ext_torque[2],Hx,Hy,Hz,'z') 
-        es.part[n].ext_torque = np.array([x_ext_torque,y_ext_torque,z_ext_torque])
-
+        es.part[n].ext_torque = np.cross(es.part[n].dip,H)
+    es.integrator.run(1)
     temp = es.analysis.energy()["ideal"]/((deg_free/2.0)*n_part)
     print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
 #puts "t=[setmd time] E=[analyze energy total], T=$temp"
