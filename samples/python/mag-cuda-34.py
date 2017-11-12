@@ -47,7 +47,7 @@ Oe_to_Am = 79.577
 
 #Medium
 #[Pa*s] Kerosene dynamic viscousity
-eta_car = 0.00164
+eta_car = 0.00149
 #[J] Hamaker constant
 A_h = 4.0E-20
 T = 300.0
@@ -292,22 +292,29 @@ print ("==============================")
 print ' {0} | {1} | {2} | {3}'.format('t_epoch','t_in_silico','Mz',T)
 print ("==============================")
 es.integrator.run(steps = 0,recalc_forces = True) ############?
-j = 1E20
-i =0
+H = np.array([Hx,Hy,((Hz*Oe_to_Am)/H0)])
 visualizer = visualization.mayaviLive(es)
-def main_tread():
+
+def main_tread():        
+    i=0
     while True:
+        print ("1st tread")
+        for n in range(n_part):
+            es.part[n].ext_torque = np.cross(es.part[n].dip,H)
+        temp = es.analysis.energy()["ideal"]/((deg_free/2.0)*n_part)
+        print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
+        es.integrator.run(steps = 10,recalc_forces = False)
+        i=i+1   
         es.integrator.run(1)
         visualizer.update()
+
 t = Thread(target = main_tread)
 t.daemon = True
-H = np.array([Hx,Hy,((Hz*Oe_to_Am)/H0)])
-while(i<j):
-    for n in range(n_part):
-        es.part[n].ext_torque = np.cross(es.part[n].dip,H)
-    es.integrator.run(1)
-    temp = es.analysis.energy()["ideal"]/((deg_free/2.0)*n_part)
-    print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
+t.start()
+visualizer.start()
+
+            
+    
 #puts "t=[setmd time] E=[analyze energy total], T=$temp"
 #puts "t=[setmd time] dipm=[observable $dipm_obs print]"
    # H_demag = 0.0
@@ -315,16 +322,10 @@ while(i<j):
    # Mz = [lindex( observable ,dipm_obs ), 2]/V_carr
    #  H_mag = ((H_ext_Oe*Oe_to_Am)/H0+H_demag)
    # es.constraint.add(ext_magn_field, 0, 0, H_mag)
-    
-    es.integrator.run(steps = 10,recalc_forces = False)
-    i=+1
-    t.start()
-    visualizer.start()
 #############################################integrate 10 reuse_forces?
 #imd positions 
 
 print '{0},{1},{2},{3}'.format('[clock seconds]',es.time,Mz,temp)
-
 
 #imd disconnect 
 
