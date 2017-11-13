@@ -164,7 +164,6 @@ coord_shift = 0.1*start_lattice_a
 posx = coord_shift
 posy = coord_shift
 posz = coord_shift
-dipole_modulus = 1.3
 part_dip = np.zeros((3))
 l = 15
 for i in range(n_part):
@@ -188,6 +187,7 @@ for i in range(n_part):
         sintheta = np.sin(np.arcsin(costheta))
         #dx = part_dip[0], dy = part_dip[1] dz = part_dip[2]
         phi = 2 * np.pi * random()
+        dipole_modulus = m_l / m0
         part_dip[0] = sintheta * np.cos(phi) * dipole_modulus
         part_dip[1] = sintheta * np.sin(phi) * dipole_modulus
         part_dip[2] = costheta * dipole_modulus
@@ -202,6 +202,7 @@ for i in range(n_part):
         sintheta = np.sin(np.arcsin(costheta))
         #dx = part_dip[0], dy = part_dip[1] dz = part_dip[2]
         phi = 2 * np.pi * random()
+        dipole_modulus = m_small / m0
         part_dip[0] = sintheta * np.cos(phi) * dipole_modulus
         part_dip[1] = sintheta * np.sin(phi) * dipole_modulus
         part_dip[2] = costheta * dipole_modulus
