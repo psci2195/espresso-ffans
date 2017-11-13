@@ -135,7 +135,7 @@ gamma0 = 3*pi*eta_car*pow(SIGMA,2)/math.sqrt(M0*kb*T)
 # setmd time_step [expr 0.05]
 
 es.time_step = 5E-2
-n_part = 200
+n_part = 5000
 
 #H_ext_Oe = 500.0
 H_ext_Oe = 0.0
@@ -143,7 +143,7 @@ H_ext_Oe = 0.0
 n_part_small = n_part*(1-PHI_l)
 #set box_l [expr pow($n_part*$PI*($PHI_l*pow($d_l_hard/$SIGMA,3.0)+(1-$PHI_l)*pow($d_small_hard/$SIGMA,3.0))/(6.0*$phi_v),1./3.)]
 start_lattice_a = 2*d_l_hydrod/SIGMA
-buf_l = 2*start_lattice_a
+buf_l = 50*start_lattice_a
 box_l = start_lattice_a*pow(n_part,1/3.0)+buf_l
 
 V_carr = pow(box_l,3.0)
@@ -260,7 +260,7 @@ else:
 #prepare_vmd_connection("vmdfile", 10000) GRAPH
 #anykey
 cap = 1
-for cap in range(200):
+for cap in range(2):
     print 't={0} E={1}'.format(es.time,es.analysis.energy(es)["ideal"])
 #    es.inter(individual = cap) 
     es.non_bonded_inter.set_force_cap(cap)
@@ -270,7 +270,7 @@ for cap in range(200):
 
 es.non_bonded_inter.set_force_cap(0)
 
-for i in range(5):
+for i in range(2):
     temp = es.analysis.energy()["ideal"] /((deg_free/2.0)*n_part)
     print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
     es.integrator.run(10)
@@ -283,8 +283,9 @@ for i in range(5):
 #es.inter.add(magnetic, 1.0, bh-gpu)
 #inter magnetic 1.0 dds-gpu
 
-dds_cpu = DipolarDirectSumCpu(bjerrum_length = 1.0)
-es.actors.add(dds_cpu)
+#my_actor = DipolarDirectSumCpu(bjerrum_length = 1.0)
+my_actor = DipolarBarnesHutGpu(bjerrum_length = 1.0, epssq = 100.0, itolsq = 4.0)
+es.actors.add(my_actor)
 
 #H_demag = 0.0
 #dipm_obs = es.observables.MagneticDipoleMoment(com_dipole_moment, all) 
@@ -305,8 +306,8 @@ def main_tread():
         temp = es.analysis.energy()["ideal"]/((deg_free/2.0)*n_part)
         print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
         es.integrator.run(steps = 10,recalc_forces = False)
-        i=i+1   
-        es.integrator.run(1)
+        i=i+10   
+        es.integrator.run(10)
         visualizer.update()
 
 t = Thread(target = main_tread)
