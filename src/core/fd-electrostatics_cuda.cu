@@ -69,10 +69,10 @@ FdElectrostatics::FdElectrostatics(InputParameters inputParameters,
     throw std::string("Unable to create fft plan");
   }
 
-  if (cufftSetCompatibilityMode(plan_fft, CUFFT_COMPATIBILITY_NATIVE) !=
+  /*if (cufftSetCompatibilityMode(plan_fft, COMPATIBILITY_FFTW_PADDING) !=
       CUFFT_SUCCESS) {
     throw std::string("Unable to set fft compatibility mode to native");
-  }
+  }*/
 
   if (cufftSetStream(plan_fft, cuda_stream) != CUFFT_SUCCESS) {
     throw std::string("Unable to assign FFT to cuda stream");
@@ -83,11 +83,11 @@ FdElectrostatics::FdElectrostatics(InputParameters inputParameters,
     throw std::string("Unable to create ifft plan");
   }
 
-  if( cufftSetCompatibilityMode( plan_ifft, CUFFT_COMPATIBILITY_NATIVE ) !=
+  /*if( cufftSetCompatibilityMode( plan_ifft, COMPATIBILITY_FFTW_PADDING ) !=
   CUFFT_SUCCESS)
   {
    throw std::string("Unable to set ifft compatibility mode to native");
-  }
+  }*/
 
   if (cufftSetStream(plan_ifft, cuda_stream) != CUFFT_SUCCESS) {
     throw std::string("Unable to assign FFT to cuda stream");

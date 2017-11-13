@@ -755,12 +755,12 @@ void p3m_gpu_init(int cao, int mesh[3], double alpha) {
 
       cufftPlan3d(&(p3m_gpu_fft_plans.forw_plan), mesh[0], mesh[1], mesh[2],
                   CUFFT_PLAN_FORW_FLAG);
-      cufftSetCompatibilityMode(p3m_gpu_fft_plans.forw_plan,
-                                CUFFT_COMPATIBILITY_NATIVE);
+      //cufftSetCompatibilityMode(p3m_gpu_fft_plans.forw_plan,
+      //                          COMPATIBILITY_FFTW_PADDING);
       cufftPlan3d(&(p3m_gpu_fft_plans.back_plan), mesh[0], mesh[1], mesh[2],
                   CUFFT_PLAN_BACK_FLAG);
-      cufftSetCompatibilityMode(p3m_gpu_fft_plans.back_plan,
-                                CUFFT_COMPATIBILITY_NATIVE);
+      //cufftSetCompatibilityMode(p3m_gpu_fft_plans.back_plan,
+      //                          COMPATIBILITY_FFTW_PADDING);
     }
 
     if (((reinit_if == 1) || (p3m_gpu_data_initialized == 0)) &&
