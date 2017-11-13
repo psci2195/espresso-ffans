@@ -143,8 +143,8 @@ H_ext_Oe = 0.0
 n_part_small = n_part*(1-PHI_l)
 #set box_l [expr pow($n_part*$PI*($PHI_l*pow($d_l_hard/$SIGMA,3.0)+(1-$PHI_l)*pow($d_small_hard/$SIGMA,3.0))/(6.0*$phi_v),1./3.)]
 start_lattice_a = 2*d_l_hydrod/SIGMA
-buf_l = 50*start_lattice_a
-box_l = start_lattice_a*pow(n_part,1/3.0)+buf_l
+buf_l = 10*start_lattice_a
+box_l = start_lattice_a*pow(n_part,1/3.0)+2*buf_l
 
 V_carr = pow(box_l,3.0)
 box_l_x = box_l*1.0
@@ -160,7 +160,8 @@ es.thermostat.set_langevin(kT = temp, gamma = 1)
 es.cell_system.skin = 0
 es.cell_system.set_n_square(use_verlet_lists=False)
 
-coord_shift = 0.1*start_lattice_a
+#coord_shift = 0.1*start_lattice_a
+coord_shift = buf_l
 posx = coord_shift
 posy = coord_shift
 posz = coord_shift
