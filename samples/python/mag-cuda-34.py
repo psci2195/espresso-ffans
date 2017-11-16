@@ -135,7 +135,7 @@ gamma0 = 3*pi*eta_car*pow(SIGMA,2)/math.sqrt(M0*kb*T)
 # setmd time_step [expr 0.05]
 
 es.time_step = 5E-2
-n_part = 500
+n_part = 2500
 
 #H_ext_Oe = 500.0
 H_ext_Oe = 0.0
@@ -159,7 +159,7 @@ gammar = 1
 es.thermostat.set_langevin(kT = temp, gamma = 1)
 es.cell_system.skin = 0
 es.cell_system.set_n_square(use_verlet_lists=False)
-analyse_step = 100
+analyse_step = 1000
 
 #coord_shift = 0.1*start_lattice_a
 coord_shift = buf_l
@@ -272,7 +272,11 @@ for cap in range(2):
 
 es.non_bonded_inter.set_force_cap(0)
 
-for i in range(2):
+#my_actor = DipolarDirectSumCpu(bjerrum_length = 1.0)
+my_actor = DipolarBarnesHutGpu(bjerrum_length = 1.0, epssq = 100.0, itolsq = 4.0)
+es.actors.add(my_actor)
+
+for i in range(1000):
     temp = es.analysis.energy()["ideal"] /((deg_free/2.0)*n_part)
     print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
     es.integrator.run(10)
@@ -284,10 +288,6 @@ for i in range(2):
 #################################inter magnetic 1.0 bh-gpu
 #es.inter.add(magnetic, 1.0, bh-gpu)
 #inter magnetic 1.0 dds-gpu
-
-#my_actor = DipolarDirectSumCpu(bjerrum_length = 1.0)
-my_actor = DipolarBarnesHutGpu(bjerrum_length = 1.0, epssq = 100.0, itolsq = 4.0)
-es.actors.add(my_actor)
 
 #H_demag = 0.0
 #dipm_obs = es.observables.MagneticDipoleMoment(com_dipole_moment, all) 
