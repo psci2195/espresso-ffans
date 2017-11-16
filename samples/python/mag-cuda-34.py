@@ -135,7 +135,7 @@ gamma0 = 3*pi*eta_car*pow(SIGMA,2)/math.sqrt(M0*kb*T)
 # setmd time_step [expr 0.05]
 
 es.time_step = 5E-2
-n_part = 5000
+n_part = 500
 
 #H_ext_Oe = 500.0
 H_ext_Oe = 0.0
@@ -159,6 +159,7 @@ gammar = 1
 es.thermostat.set_langevin(kT = temp, gamma = 1)
 es.cell_system.skin = 0
 es.cell_system.set_n_square(use_verlet_lists=False)
+analyse_step = 100
 
 #coord_shift = 0.1*start_lattice_a
 coord_shift = buf_l
@@ -300,12 +301,19 @@ visualizer = visualization.mayaviLive(es)
 
 def main_tread():        
     i=0
+    timestep = 2
     while True:
-        print ("1st tread")
         for n in range(n_part):
             es.part[n].ext_torque = np.cross(es.part[n].dip,H)
         temp = es.analysis.energy()["ideal"]/((deg_free/2.0)*n_part)
-        print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
+        #print '(t={0} E={1} , T={2})'.format(es.time,es.analysis.energy()["total"],temp)
+      #  print '(t={0})'.format(es.time)
+      #  print (str(int(es.time%analyse_step)) == str(int(timestep)))
+      #  print (str(int(es.time%analyse_step)))
+        if(str(int(es.time%analyse_step)) == str(int(timestep))):        
+            print('{0};\n'.format(es.time))
+            for k in range(n_part):
+                print '{0};{1};{2};{3};\n'.format(k,es.part[k].pos[0],es.part[k].pos[1],es.part[k].pos[2])
         es.integrator.run(steps = 10,recalc_forces = False)
         i=i+10   
         es.integrator.run(10)
@@ -328,7 +336,7 @@ visualizer.start()
 #############################################integrate 10 reuse_forces?
 #imd positions 
 
-print '{0},{1},{2},{3}'.format('[clock seconds]',es.time,Mz,temp)
+print '{0},{1},{2},{3}'.format('[clock seconds]',es.time,'Mz',temp)
 
 #imd disconnect 
 
