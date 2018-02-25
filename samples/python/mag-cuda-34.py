@@ -26,7 +26,7 @@ from espressomd.magnetostatics import *
 from espressomd.observables import *
 from espressomd.analyze import *
 from threading import Thread
-
+import analys
 
 
 # Handle for espresso system
@@ -272,11 +272,11 @@ for cap in range(2):
 
 es.non_bonded_inter.set_force_cap(0)
 
-#my_actor = DipolarDirectSumCpu(bjerrum_length = 1.0)
-my_actor = DipolarBarnesHutGpu(bjerrum_length = 1.0, epssq = 100.0, itolsq = 4.0)
+my_actor = DipolarDirectSumCpu(bjerrum_length = 1.0)
+# my_actor = DipolarBarnesHutGpu(bjerrum_length = 1.0, epssq = 100.0, itolsq = 4.0)
 es.actors.add(my_actor)
 
-for i in range(1000):
+for i in range(10):
     temp = es.analysis.energy()["ideal"] /((deg_free/2.0)*n_part)
     print 't={0} E={1} , T={2}")'.format(es.time,es.analysis.energy()["total"],temp)
     es.integrator.run(10)
@@ -318,10 +318,16 @@ def main_tread():
         i=i+10   
         es.integrator.run(10)
         visualizer.update()
-
+def sizeAnalys():
+    while True:
+        print(es.time)
+        print(analys.Point(n_part,es).Analyse().diameter)    
+analyzeThread = Thread(target=sizeAnalys)
 t = Thread(target = main_tread)
 t.daemon = True
+analyzeThread.daemon = True
 t.start()
+analyzeThread.start()
 visualizer.start()
 
             
