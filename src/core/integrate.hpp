@@ -29,6 +29,7 @@
 #define INTEG_METHOD_NPT_ISO   0
 #define INTEG_METHOD_NVT       1
 #define INTEG_METHOD_STEEPEST_DESCENT 2
+#define INTEG_METHOD_NAT_COMPUTE_OPTIM 3
 
 /************************************************************/
 /** \name Exported Variables */

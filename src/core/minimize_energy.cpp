@@ -23,6 +23,7 @@
 #include "initialize.hpp"
 #include "integrate.hpp"
 #include "rotation.hpp"
+#include "energy.hpp"
 #include "utils.hpp"
 #include <algorithm>
 #include <limits>
@@ -160,3 +161,82 @@ bool minimize_energy(void) {
 
   return true;
 }
+
+#ifdef NATURAL_COMPUTATION
+// This is a simulation step. It is calling from the main loop in the integrate_vv(). Its Velocity Verlet structure is
+// formal for the AI method. However, we should keep the main integration loop of the ESPResSo.
+bool nc_optimization_step(void) {
+  // TODO: main place for the Matteo's NATURAL_COMPUTATION algorithm. Just an atomic step which will be repeated params->max_steps times.
+  // =======================
+
+  // TUTORIAL PART BEGIN
+  // -------------------
+
+  // The loop over all the particles in the local cell:
+  for (auto &p : local_cells.particles()) {
+    // For all Cartesian coordinates
+    for (int j = 0; j < 3; j++) {
+#ifdef EXTERNAL_FORCES
+      // Skip, if coordinate is fixed
+      if (!(p.p.ext_flag & COORD_FIXED(j)))
+#endif
+#ifdef VIRTUAL_SITES
+        // Skip positional increments of virtual particles
+        if (!p.p.isVirtual)
+#endif
+        {
+          int i = p.p.identity;
+          printf("--------------\n");
+          printf("Current potential energy of the system = %e", calculate_current_potential_energy_of_system());
+          printf("--------------\n");
+          printf("particle %d: Cartesian spatial coordinate r[%d]=%e \n", i, j, p.r.p[j]);
+          printf("particle %d: velocity v[%d]=%e \n", i, j, p.m.v[j]);
+          printf("particle %d: force f[%d]=%e \n", i, j, p.f.f[j]);
+#ifdef DIPOLES
+          printf("particle %d: dipole moment dip[%d]=%e \n", i, j, p.r.dip[j]);
+#endif
+#ifdef ROTATION
+          // Torque in the lab frame:
+          printf("particle %d: torque torque[%d]=%e \n", i, j, p.f.torque[j]);
+          // ALWAYS IN PARTICLE FIXEXD, I.E., CO-ROTATING COORDINATE SYSTEM
+          printf("particle %d: angular velocity omega[%d]=%e \n", i, j, p.m.omega[j]);
+#endif
+          MINIMIZE_ENERGY_TRACE(printf("some trace message.."));
+        }
+    }
+    //printf("--------------\n");
+    //printf("--------------\n");
+  }
+  // -------------------
+  // TUTORIAL PART END
+  // TODO (Bogdan): to migrate the MPI related fragments like this from the steepest_descent_step().
+  //                it will be needed for the proper over cluster reduction.
+    set_resort_particles(Cells::RESORT_LOCAL);
+
+    // TODO (Matteo): exit criterion, i.e. the optimization end.
+    return false;
+}
+
+void nc_minimize_energy_init(void) {
+  if (!params)
+    params = new MinimizeEnergyParameters;
+
+  // Number of iterations in the Velocity Verlet loop:
+  params->max_steps = 100;
+  /*params->f_max = f_max;
+  params->gamma = gamma;
+  params->max_displacement = max_displacement;*/
+}
+bool nc_minimize_energy(void) {
+  if (!params)
+    params = new MinimizeEnergyParameters;
+
+  MPI_Bcast(params, sizeof(MinimizeEnergyParameters), MPI_BYTE, 0, comm_cart);
+  int integ_switch_old = integ_switch;
+  integ_switch = INTEG_METHOD_NAT_COMPUTE_OPTIM;
+  integrate_vv(params->max_steps, -1);
+  integ_switch = integ_switch_old;
+
+  return true;
+}
+#endif // NATURAL_COMPUTATION

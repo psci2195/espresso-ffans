@@ -17,6 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from __future__ import print_function, absolute_import
+include "myconfig.pxi"
 from libcpp.string cimport string  # import std::string as string
 from libcpp.vector cimport vector  # import std::vector as vector
 from libcpp cimport bool as cbool
@@ -52,8 +53,12 @@ cdef extern from "errorhandling.hpp" namespace "ErrorHandling":
 
 cdef extern from "minimize_energy.hpp":
     void minimize_energy_init(const double f_max, const double gamma, const int max_steps, const double max_displacement);
+    IF NATURAL_COMPUTATION:
+        void nc_minimize_energy_init()
 cdef extern from "communication.hpp":
     int mpi_minimize_energy() 
+    IF NATURAL_COMPUTATION:
+        int mpi_nc_minimize_energy()
 
 
 

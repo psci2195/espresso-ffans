@@ -29,3 +29,11 @@ cdef extern from "minimize_energy.hpp":
 
 cdef extern from "communication.hpp":
     cdef int mpi_minimize_energy()
+
+cdef extern from "minimize_energy.hpp":
+    IF NATURAL_COMPUTATION:
+        void nc_minimize_energy_init()
+
+cdef extern from "communication.hpp":
+    IF NATURAL_COMPUTATION:
+        int mpi_nc_minimize_energy()

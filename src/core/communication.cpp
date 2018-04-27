@@ -196,6 +196,7 @@ static int terminated = 0;
   CB(mpi_external_potential_sum_energies_slave)                                \
   CB(mpi_check_runtime_errors_slave)                                           \
   CB(mpi_minimize_energy_slave)                                                \
+  CB(mpi_nc_minimize_energy_slave)                                             \
   CB(mpi_gather_cuda_devices_slave)                                            \
   CB(mpi_scafacos_set_parameters_slave)                                        \
   CB(mpi_scafacos_set_r_cut_and_tune_slave)                                    \
@@ -1174,6 +1175,17 @@ int mpi_minimize_energy(void) {
 }
 
 void mpi_minimize_energy_slave(int a, int b) { minimize_energy(); }
+
+#ifdef NATURAL_COMPUTATION
+/********************* REQ_NC_MIN_ENERGY ********/
+
+int mpi_nc_minimize_energy(void) {
+  mpi_call(mpi_nc_minimize_energy_slave, 0, 0);
+  return nc_minimize_energy();
+}
+
+void mpi_nc_minimize_energy_slave(int a, int b) { nc_minimize_energy(); }
+#endif
 
 /********************* REQ_INTEGRATE ********/
 int mpi_integrate(int n_steps, int reuse_forces) {

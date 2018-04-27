@@ -31,10 +31,13 @@ cdef class Integrator(object):
 
     cdef str _method
     cdef object _steepest_descent_params
+    cdef object _nc_optimization_params
 
     def __init__(self):
         self._method = "VV"
         self._steepest_descent_params = {}
+        if NATURAL_COMPUTATION:
+            self._nc_optimization_params = {}
 
     def run(self, steps=1, recalc_forces=False, reuse_forces=False):
         """
@@ -67,6 +70,9 @@ cdef class Integrator(object):
                                  steps,
                                  self._steepest_descent_params["max_displacement"])
             mpi_minimize_energy()
+        elif self._method == "INTEG_METHOD_NAT_COMPUTE_OPTIM":
+            nc_minimize_energy_init()
+            mpi_nc_minimize_energy()
 
     def set_steepest_descent(self, *args, **kwargs):
         """
@@ -84,6 +90,24 @@ cdef class Integrator(object):
 
         self._steepest_descent_params.update(kwargs)
         self._method = "STEEPEST_DESCENT"
+
+    if NATURAL_COMPUTATION:
+        def set_nc_optimization(self, *args, **kwargs):
+            """
+            Set parameters for the natural computation based optimization.
+    
+            .. seealso::
+                :class:`espressomd.minimize_energy.MinimizeEnergy`
+    
+            """
+    
+            #req = ["f_max", "gamma", "max_displacement"]
+            #for key in kwargs:
+            #    if not key in req:
+            #        raise Exception("Set required parameter %s first." %key)
+    
+            self._nc_optimization_params.update(kwargs)
+            self._method = "INTEG_METHOD_NAT_COMPUTE_OPTIM"
 
     def set_vv(self):
         """

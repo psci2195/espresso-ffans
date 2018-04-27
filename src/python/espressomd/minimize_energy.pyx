@@ -20,6 +20,7 @@
 
 from __future__ import print_function, absolute_import
 from . cimport minimize_energy
+include "myconfig.pxi"
 from espressomd.utils import is_valid_type
 
 cdef class MinimizeEnergy(object):
@@ -97,3 +98,12 @@ cdef class MinimizeEnergy(object):
         minimize_energy_init(self._params["f_max"], self._params["gamma"], self._params[
                              "max_steps"], self._params["max_displacement"])
         mpi_minimize_energy()
+
+    IF NATURAL_COMPUTATION:
+        def nc_minimize(self):
+            """
+            Perform an energy minimization by means of the natural computation.
+    
+            """
+            nc_minimize_energy_init()
+            mpi_nc_minimize_energy()

@@ -398,6 +398,13 @@ int mpi_integrate(int n_steps, int reuse_forces);
  */
 int mpi_minimize_energy(void);
 
+#ifdef NATURAL_COMPUTATION
+/** Issue REQ_NC_MIN_ENERGY: start energy minimization by means of the natural computation algorithm.
+    @return nonzero on error
+ */
+int mpi_nc_minimize_energy(void);
+#endif
+
 /** Issue REQ_BCAST_IA: send new ia params.
     Also calls \ref on_short_range_ia_change.
 

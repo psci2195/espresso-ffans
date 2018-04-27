@@ -26,4 +26,10 @@ bool minimize_energy(void);
 void minimize_energy_init(const double f_max, const double gamma, const int max_steps, const double max_displacement);
 bool steepest_descent_step(void);
 
+#ifdef NATURAL_COMPUTATION
+bool nc_minimize_energy(void);
+void nc_minimize_energy_init(void);
+bool nc_optimization_step(void);
+#endif
+
 #endif /* __MINIMIZE_ENERGY */

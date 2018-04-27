@@ -22,6 +22,7 @@
 #define GHMC
 #define DPD
 #define METADYNAMICS
+#define NATURAL_COMPUTATION
 
 #define LB
 #define LB_BOUNDARIES

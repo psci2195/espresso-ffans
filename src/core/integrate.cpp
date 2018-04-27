@@ -262,7 +262,7 @@ void integrate_vv(int n_steps, int reuse_forces) {
 
     force_calc();
 
-    if (integ_switch != INTEG_METHOD_STEEPEST_DESCENT) {
+    if ((integ_switch != INTEG_METHOD_STEEPEST_DESCENT) && (integ_switch != INTEG_METHOD_NAT_COMPUTE_OPTIM)) {
       rescale_forces();
 #ifdef ROTATION
       convert_initial_torques();
@@ -272,7 +272,7 @@ void integrate_vv(int n_steps, int reuse_forces) {
     thermo_cool_down();
 
 #ifdef COLLISION_DETECTION
-    if (integ_switch != INTEG_METHOD_STEEPEST_DESCENT) {
+    if ((integ_switch != INTEG_METHOD_STEEPEST_DESCENT) && (integ_switch != INTEG_METHOD_NAT_COMPUTE_OPTIM)) {
         handle_collisions();
     }
 #endif
@@ -327,6 +327,9 @@ void integrate_vv(int n_steps, int reuse_forces) {
     } else if (integ_switch == INTEG_METHOD_STEEPEST_DESCENT) {
       if (steepest_descent_step())
         break;
+    } else if (integ_switch == INTEG_METHOD_NAT_COMPUTE_OPTIM) {
+      if (nc_optimization_step())
+        break;
     } else {
       propagate_vel_pos();
     }
@@ -377,7 +380,7 @@ void integrate_vv(int n_steps, int reuse_forces) {
 
     /* Integration Step: Step 4 of Velocity Verlet scheme:
        v(t+dt) = v(t+0.5*dt) + 0.5*dt * f(t+dt) */
-    if (integ_switch != INTEG_METHOD_STEEPEST_DESCENT) {
+    if ((integ_switch != INTEG_METHOD_STEEPEST_DESCENT) && (integ_switch != INTEG_METHOD_NAT_COMPUTE_OPTIM)) {
       rescale_forces_propagate_vel();
 #ifdef ROTATION
       convert_torques_propagate_omega();
@@ -400,7 +403,7 @@ void integrate_vv(int n_steps, int reuse_forces) {
 
 // progagate one-step functionalities
 
-if (integ_switch != INTEG_METHOD_STEEPEST_DESCENT) {
+if ((integ_switch != INTEG_METHOD_STEEPEST_DESCENT) && (integ_switch != INTEG_METHOD_NAT_COMPUTE_OPTIM) ) {
 #ifdef LB
     if (lattice_switch & LATTICE_LB)
       lattice_boltzmann_update();
@@ -483,7 +486,7 @@ if (integ_switch != INTEG_METHOD_STEEPEST_DESCENT) {
 
   /* Steepest descent operatates on unscaled forces,
      so we have to scale them back now. */
-  if(integ_switch == INTEG_METHOD_STEEPEST_DESCENT) {
+  if ((integ_switch == INTEG_METHOD_STEEPEST_DESCENT) || (integ_switch == INTEG_METHOD_NAT_COMPUTE_OPTIM)) {
     rescale_forces();
   }
 
