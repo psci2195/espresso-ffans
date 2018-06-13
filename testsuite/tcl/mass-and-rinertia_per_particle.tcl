@@ -27,9 +27,7 @@ puts "------------------------------------------------"
 
 proc test_mass-and-rinertia_per_particle {test_case} {
     # make real random draw
-    set cmd "t_random seed"
-    for {set i 0} {$i < [setmd n_nodes]} { incr i } {
-	  lappend cmd [expr [pid] + $i] }
+    set cmd "t_random seed 1"
     eval $cmd
 
     set gamma(0) 1.
@@ -109,9 +107,10 @@ proc test_mass-and-rinertia_per_particle {test_case} {
                 }
             }
             if {[has_feature "VERLET_STEP4_VELOCITY"]} {
-                set tolerance_v 4.5E-5
+                set tolerance_v 4.4E-5
             } else {
-                set tolerance_v 1.0E-2
+                #set tolerance_v 1.0E-2
+                set tolerance_v 8.7E-5
             }
             set dv0 [expr abs([lindex [part 0 print v] $k] -exp(-$gamma(0)*[setmd time] / $mass))]
             set dv1 [expr abs([lindex [part 1 print v] $k] -exp(-$gamma(1)*[setmd time] / $mass))]
@@ -279,7 +278,7 @@ proc test_mass-and-rinertia_per_particle {test_case} {
     set therm_steps 1200
     integrate $therm_steps
 
-    set int_steps 100
+    set int_steps 10
     for {set i 0} {$i <$loops} {incr i} {
         integrate $int_steps
         # Get kinetic energy in each degree of freedom for all particles
