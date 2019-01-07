@@ -31,7 +31,8 @@ class ThermoTest(ut.TestCase):
     longMessage = True
     # Handle for espresso system
     system = espressomd.System(box_l=[1.0, 1.0, 1.0])
-    system.seed = system.cell_system.get_state()['n_nodes'] * [1234]
+    system.seed = range(system.cell_system.get_state()["n_nodes"])
+    system.cell_system.set_domain_decomposition(use_verlet_lists=True)
     system.cell_system.skin = 5.0
 
     # The NVT thermostat parameters
@@ -63,7 +64,7 @@ class ThermoTest(ut.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        np.random.seed(15)
+        np.random.seed(16)
 
     def setUp(self):
         self.system.time = 0.0
@@ -141,10 +142,15 @@ class ThermoTest(ut.TestCase):
             self.gamma_rot_p_validate[k,:] = self.gamma_global_rot[:]
             self.halfkT_p_validate[k] = self.kT / 2.0
 
-    def dissipation_param_setup(self):
+    def dissipation_param_setup(self, n):
         """
         Setup the parameters for the following dissipation
         test.
+
+        Parameters
+        ----------
+        n : :obj:`int`
+            Number of particles of the each type. There are 2 types.
 
         """
 
@@ -198,13 +204,16 @@ class ThermoTest(ut.TestCase):
         # Particles
         self.mass = 12.74
         self.J = 10.0, 10.0, 10.0
-        for i in range(2):
-            system.part.add(rotation=(1, 1, 1), pos=(0.0, 0.0, 0.0), id=i)
-            system.part[i].v = 1.0, 1.0, 1.0
-            if "ROTATION" in espressomd.features():
-                system.part[i].omega_body = 1.0, 1.0, 1.0
-            system.part[i].mass = self.mass
-            system.part[i].rinertia = self.J
+        for i in range(n):
+            for k in range(2):
+                ind = i + k * n
+                self.system.part.add(
+                    rotation=(1, 1, 1), pos=(0.0, 0.0, 0.0), id=ind)
+                self.system.part[ind].v = 1.0, 1.0, 1.0
+                if "ROTATION" in espressomd.features():
+                    self.system.part[ind].omega_body = 1.0, 1.0, 1.0
+                self.system.part[ind].mass = self.mass
+                self.system.part[ind].rinertia = self.J
 
     def dissipation_viscous_drag_setup_bd(self):
         """
@@ -294,26 +303,33 @@ class ThermoTest(ut.TestCase):
                 if "ROTATION" in espressomd.features():
                     self.system.part[ind].omega_body = part_omega_body
 
-    def check_dissipation(self):
+    def check_dissipation(self, n):
         """
         Check the dissipation relations: the simple viscous decelleration test.
+
+        Parameters
+        ----------
+        n : :obj:`int`
+            Number of particles of the each type. There are 2 types.
 
         """
 
         system = self.system
         tol = 1.25E-4
-        for i in range(100):
-            for k in range(2):
-                for j in range(3):
-                    # Note: velocity is defined in the lab frame of reference
-                    # while gamma_tr is defined in the body one.
-                    # Hence, only isotropic gamma_tran_p_validate could be
-                    # tested here.
-                    self.assertLess(abs(
-                        system.part[k].v[j] - math.exp(- self.gamma_tran_p_validate[k, j] * system.time / self.mass)), tol)
-                    if "ROTATION" in espressomd.features():
+        for step in range(100):
+            for i in range(n):
+                for k in range(2):
+                    ind = i + k * n
+                    for j in range(3):
+                        # Note: velocity is defined in the lab frame of reference
+                        # while gamma_tr is defined in the body one.
+                        # Hence, only isotropic gamma_tran_p_validate could be
+                        # tested here.
                         self.assertLess(abs(
-                            system.part[k].omega_body[j] - math.exp(- self.gamma_rot_p_validate[k, j] * system.time / self.J[j])), tol)
+                            self.system.part[ind].v[j] - math.exp(- self.gamma_tran_p_validate[k, j] * self.system.time / self.mass)), tol)
+                        if "ROTATION" in espressomd.features():
+                            self.assertLess(abs(
+                                self.system.part[ind].omega_body[j] - math.exp(- self.gamma_rot_p_validate[k, j] * self.system.time / self.J[j])), tol)
 
     # Note: the decelleration test is needed for the Langevin thermostat only. Brownian thermostat is defined
     # over a larger time-step by its concept.
@@ -433,7 +449,7 @@ class ThermoTest(ut.TestCase):
 
         system.integrator.run(therm_steps)
 
-        int_steps = 5
+        int_steps = 50
         for i in range(loops):
             system.integrator.run(int_steps)
             # Get kinetic energy in each degree of freedom for all particles
@@ -568,7 +584,7 @@ class ThermoTest(ut.TestCase):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
         n = 1
-        self.dissipation_param_setup()
+        self.dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
         system.thermostat.set_langevin(kT=self.kT, gamma=self.gamma_global)
@@ -633,7 +649,7 @@ class ThermoTest(ut.TestCase):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
         n = 1
-        self.dissipation_param_setup()
+        self.dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
         system.thermostat.set_langevin(kT=self.kT, gamma=self.gamma_global)
@@ -690,7 +706,7 @@ class ThermoTest(ut.TestCase):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
         n = 1
-        self.dissipation_param_setup()
+        self.dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
         system.thermostat.set_langevin(kT=self.kT, gamma=self.gamma_global)
@@ -747,7 +763,7 @@ class ThermoTest(ut.TestCase):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
         n = 1
-        self.dissipation_param_setup()
+        self.dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
         system.thermostat.set_langevin(kT=self.kT, gamma=self.gamma_global)
@@ -807,7 +823,7 @@ class ThermoTest(ut.TestCase):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
         n = 1
-        self.dissipation_param_setup()
+        self.dissipation_param_setup(n)
         self.set_langevin_global_defaults_rot_differ()
         # The test case-specific thermostat and per-particle parameters
         system.thermostat.set_langevin(
