@@ -616,9 +616,9 @@ class ThermoTest(ut.TestCase):
     def test_case_01(self):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
-        n = 200
-        therm_steps = 20
-        loops = 250
+        n = 150
+        therm_steps = int(1E3)
+        loops = 10
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -678,9 +678,9 @@ class ThermoTest(ut.TestCase):
     def test_case_11(self):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
-        n = 200
-        therm_steps = 20
-        loops = 250
+        n = 150
+        therm_steps = int(1E3)
+        loops = 10
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -735,9 +735,9 @@ class ThermoTest(ut.TestCase):
     def test_case_21(self):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
-        n = 200
-        therm_steps = 20
-        loops = 250
+        n = 150
+        therm_steps = int(1E3)
+        loops = 10
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -794,9 +794,9 @@ class ThermoTest(ut.TestCase):
     def test_case_31(self):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
-        n = 200
-        therm_steps = 20
-        loops = 250
+        n = 150
+        therm_steps = int(1E3)
+        loops = 10
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -856,9 +856,9 @@ class ThermoTest(ut.TestCase):
     def test_case_41(self):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
-        n = 200
-        therm_steps = 20
-        loops = 250
+        n = 150
+        therm_steps = int(1E3)
+        loops = 10
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults_rot_differ()
         # The test case-specific thermostat and per-particle parameters
