@@ -589,7 +589,7 @@ class ThermoTest(ut.TestCase):
         # The test case-specific thermostat and per-particle parameters
         system.thermostat.set_langevin(kT=self.kT, gamma=self.gamma_global)
         # Actual integration and validation run
-        self.check_dissipation()
+        self.check_dissipation(n)
 
     # Test case 0.0.1:
     # no particle specific values / dissipation viscous drag only / BD only.
@@ -600,7 +600,7 @@ class ThermoTest(ut.TestCase):
             system = self.system
             # Each of 2 kind of particles will be represented by n instances:
             n = 1
-            self.dissipation_param_setup()
+            self.dissipation_param_setup(n)
             self.dissipation_viscous_drag_setup_bd()
             self.set_langevin_global_defaults()
             # The test case-specific thermostat and per-particle parameters
@@ -655,7 +655,7 @@ class ThermoTest(ut.TestCase):
         system.thermostat.set_langevin(kT=self.kT, gamma=self.gamma_global)
         self.set_particle_specific_gamma(n)
         # Actual integration and validation run
-        self.check_dissipation()
+        self.check_dissipation(n)
 
     # Test case 1.0.1: particle specific gamma but not temperature /
     # dissipation viscous drag only / BD only.
@@ -664,7 +664,7 @@ class ThermoTest(ut.TestCase):
             system = self.system
             # Each of 2 kind of particles will be represented by n instances:
             n = 1
-            self.dissipation_param_setup()
+            self.dissipation_param_setup(n)
             self.dissipation_viscous_drag_setup_bd()
             self.set_langevin_global_defaults()
             # The test case-specific thermostat and per-particle parameters
@@ -712,7 +712,7 @@ class ThermoTest(ut.TestCase):
         system.thermostat.set_langevin(kT=self.kT, gamma=self.gamma_global)
         self.set_particle_specific_temperature(n)
         # Actual integration and validation run
-        self.check_dissipation()
+        self.check_dissipation(n)
 
     # Test case 2.0.1: particle specific temperature but not gamma / dissipation
     # viscous drag only / BD only
@@ -721,7 +721,7 @@ class ThermoTest(ut.TestCase):
             system = self.system
             # Each of 2 kind of particles will be represented by n instances:
             n = 1
-            self.dissipation_param_setup()
+            self.dissipation_param_setup(n)
             self.dissipation_viscous_drag_setup_bd()
             self.set_langevin_global_defaults()
             # The test case-specific thermostat and per-particle parameters
@@ -770,7 +770,7 @@ class ThermoTest(ut.TestCase):
         self.set_particle_specific_gamma(n)
         self.set_particle_specific_temperature(n)
         # Actual integration and validation run
-        self.check_dissipation()
+        self.check_dissipation(n)
 
     # Test case 3.0.1: both particle specific gamma and temperature /
     # dissipation viscous drag only / BD only
@@ -779,7 +779,7 @@ class ThermoTest(ut.TestCase):
             system = self.system
             # Each of 2 kind of particles will be represented by n instances:
             n = 1
-            self.dissipation_param_setup()
+            self.dissipation_param_setup(n)
             self.dissipation_viscous_drag_setup_bd()
             self.set_langevin_global_defaults()
             # The test case-specific thermostat and per-particle parameters
@@ -831,7 +831,7 @@ class ThermoTest(ut.TestCase):
             gamma=self.gamma_global,
             gamma_rotation=self.gamma_global_rot)
         # Actual integration and validation run
-        self.check_dissipation()
+        self.check_dissipation(n)
 
     # Test case 4.0.1: no particle specific values / rotational specific global
     # thermostat / dissipation only / BD only
@@ -840,7 +840,7 @@ class ThermoTest(ut.TestCase):
             system = self.system
             # Each of 2 kind of particles will be represented by n instances:
             n = 1
-            self.dissipation_param_setup()
+            self.dissipation_param_setup(n)
             self.dissipation_viscous_drag_setup_bd()
             self.set_langevin_global_defaults_rot_differ()
             # The test case-specific thermostat and per-particle parameters
