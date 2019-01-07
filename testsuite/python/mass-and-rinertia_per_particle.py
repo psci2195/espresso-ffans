@@ -611,7 +611,7 @@ class ThermoTest(ut.TestCase):
         # Actual integration and validation run
         self.check_fluctuation_dissipation(n, therm_steps, loops)
         if "BROWNIAN_DYNAMICS" in espressomd.features():
-            set_initial_cond()
+            self.set_initial_cond()
             # Large time-step is OK for BD.
             system.time_step = 42
             # Less number of loops are needed in case of BD because the velocity
@@ -674,7 +674,7 @@ class ThermoTest(ut.TestCase):
         # Actual integration and validation run
         self.check_fluctuation_dissipation(n, therm_steps, loops)
         if "BROWNIAN_DYNAMICS" in espressomd.features():
-            set_initial_cond()
+            self.set_initial_cond()
             system.time_step = 42
             loops = 8
             therm_steps = 2
@@ -731,7 +731,7 @@ class ThermoTest(ut.TestCase):
         # Actual integration and validation run
         self.check_fluctuation_dissipation(n, therm_steps, loops)
         if "BROWNIAN_DYNAMICS" in espressomd.features():
-            set_initial_cond()
+            self.set_initial_cond()
             system.time_step = 42
             loops = 8
             therm_steps = 2
@@ -791,7 +791,7 @@ class ThermoTest(ut.TestCase):
         # Actual integration and validation run
         self.check_fluctuation_dissipation(n, therm_steps, loops)
         if "BROWNIAN_DYNAMICS" in espressomd.features():
-            set_initial_cond()
+            self.set_initial_cond()
             system.time_step = 42
             loops = 8
             therm_steps = 2
@@ -854,7 +854,7 @@ class ThermoTest(ut.TestCase):
         # Actual integration and validation run
         self.check_fluctuation_dissipation(n, therm_steps, loops)
         if "BROWNIAN_DYNAMICS" in espressomd.features():
-            set_initial_cond()
+            self.set_initial_cond()
             system.time_step = 42
             loops = 8
             therm_steps = 2
