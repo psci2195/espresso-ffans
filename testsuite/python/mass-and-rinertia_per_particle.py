@@ -81,7 +81,7 @@ class ThermoTest(ut.TestCase):
         self.system.part.clear()
         if "BROWNIAN_DYNAMICS" in espressomd.features():
             self.system.thermostat.turn_off()
-
+    
     def set_initial_cond(self):
         """
         Set all the particles to zero coordinates and velocities; same for time.
