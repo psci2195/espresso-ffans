@@ -456,7 +456,8 @@ cdef class Thermostat(object):
 
     IF BROWNIAN_DYNAMICS:
         @AssertThermostatType(THERMO_BROWNIAN)
-        def set_brownian(self, kT=None, gamma=None, gamma_rotation=None):
+        def set_brownian(self, kT=None, gamma=None, gamma_rotation=None,
+                         act_on_virtual=False):
             """Sets the Brownian Dynamics thermostat with required parameters 'kT' 'gamma'
             and optional parameter 'gamma_rotation'.
     
@@ -584,4 +585,7 @@ cdef class Thermostat(object):
             global thermo_switch
             thermo_switch = (thermo_switch | THERMO_BROWNIAN)
             mpi_bcast_parameter(FIELD_THERMO_SWITCH)
+            global thermo_virtual
+            thermo_virtual = act_on_virtual
+            mpi_bcast_parameter(FIELD_THERMO_VIRTUAL)
             return True
