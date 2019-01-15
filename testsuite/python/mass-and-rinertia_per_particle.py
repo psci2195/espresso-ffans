@@ -566,9 +566,12 @@ class ThermoTest(ut.TestCase):
 
     def state_print(self, check):
         system = self.system
-        print('\n', check)
-        print('\n', system.thermostat.get_state())
-        print('\n', system.part[0])
+        print('\n \n', check)
+        #print('\n', system.thermostat.get_state())
+        thermo_state = system.thermostat.get_state()
+        print('\n kT={0}, gamma={1}, type={2}'.format(thermo_state[0]["kT"], thermo_state[0]["gamma"], thermo_state[0]["type"]))
+        part = system.part[0]
+        print('\n mass={0} rintertia={1}'.format(part.mass, part.rinertia))
 
     # Test case 0.0.0:
     # no particle specific values / dissipation only / LD only.
