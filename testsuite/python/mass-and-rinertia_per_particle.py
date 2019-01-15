@@ -422,6 +422,8 @@ class ThermoTest(ut.TestCase):
         # velocity^2, omega^2, position^2
         v2 = np.zeros((2, 3))
         o2 = np.zeros((2, 3))
+        dv2 = np.zeros((2, 3))
+        do2 = np.zeros((2, 3))
         dr2 = np.zeros((2, 3))
         # Variance to compare with:
         sigma2_tr = np.zeros((2))
@@ -434,11 +436,14 @@ class ThermoTest(ut.TestCase):
                 ind = p + k * n
                 pos0[ind,:] = system.part[ind].pos
         dt0 = self.mass / self.gamma_tran_p_validate
-
+        print('\n t | kT_current_tran | kT_current_rot | dr2_current')
+        print('\n ==================================================')
         system.integrator.run(therm_steps)
-
         int_steps = 50
         for i in range(loops):
+            dv2n = np.zeros((2, 3))
+            do2n = np.zeros((2, 3))
+            dr2n = np.zeros((2, 3))
             system.integrator.run(int_steps)
             # Get kinetic energy in each degree of freedom for all particles
             for p in range(n):
@@ -447,10 +452,15 @@ class ThermoTest(ut.TestCase):
                     v = system.part[ind].v
                     if "ROTATION" in espressomd.features():
                         o = system.part[ind].omega_body
-                        o2[k,:] = o2[k,:] + np.power(o[:], 2)
+                        do2[k,:] = np.power(o[:], 2)
+                        o2[k,:] += do2[k,:]
+                        do2n[k,:] += do2[k,:]
                     pos = system.part[ind].pos
-                    v2[k,:] = v2[k,:] + np.power(v[:], 2)
+                    dv2[k,:] = np.power(v[:], 2)
+                    v2[k,:] += dv2[k,:]
+                    dv2n[k,:] += dv2[k,:]
                     dr2[k,:] = np.power((pos[:] - pos0[ind,:]), 2)
+                    dr2n[k,:] += dr2[k,:]
                     dt = (int_steps * (i + 1) + therm_steps) * \
                         system.time_step
                     # translational diffusion variance: after a closed-form
@@ -472,6 +482,10 @@ class ThermoTest(ut.TestCase):
                                                                                                                                                             j])))
                     dr_norm[k] += (sum(dr2[k,:]) -
                                    sigma2_tr[k]) / sigma2_tr[k]
+            kT_current_tran = 0.5 * self.mass * sum(dv2n[0,:]) / (n * 3.0 * self.halfkT_p_validate[0])
+            kT_current_rot = 0.5 * sum(self.J[:] * do2n[0,:]) / (n * 3.0 * self.halfkT_p_validate[0])
+            dr2_current = sum(dr2n[0,:]) / (sigma2_tr[0] * n)
+            print('\n{0},{1},{2},{3}'.format(dt, kT_current_tran, kT_current_rot, dr2_current))
 
         #tolerance = 0.15
         Ev = 0.5 * self.mass * v2 / (n * loops)
@@ -616,8 +630,9 @@ class ThermoTest(ut.TestCase):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
         n = 150
-        therm_steps = int(1E3)
-        loops = 10
+        therm_steps = 2
+        # Divided to a number of integration steps per loop
+        loops = int(1E4) / 50
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -629,14 +644,14 @@ class ThermoTest(ut.TestCase):
         if "BROWNIAN_DYNAMICS" in espressomd.features():
             self.set_initial_cond()
             # Large time-step is OK for BD.
-            system.time_step = 42
+            #system.time_step = 42
             # Less number of loops are needed in case of BD because the velocity
             # distribution is already as required. It is not a result of a real dynamics.
-            loops = 8
+            #loops = 8
             # The BD does not require so the warmup. Only 1 step is enough.
             # More steps are taken just to be sure that they will not lead
             # to wrong results.
-            therm_steps = 2
+            #therm_steps = 2
             # The test case-specific thermostat
             system.thermostat.turn_off()
             system.thermostat.set_brownian(kT=self.kT, gamma=self.gamma_global)
