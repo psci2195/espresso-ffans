@@ -311,7 +311,7 @@ class ThermoTest(ut.TestCase):
 
     # Note: the decelleration test is needed for the Langevin thermostat only. Brownian thermostat is defined
     # over a larger time-step by its concept.
-    def check_dissipation_viscous_drag(self, tol):
+    def check_dissipation_viscous_drag(self, n, tol):
         """
         Check the dissipation relations: the drag terminal velocity tests,
         aka the drift in case of the electrostatics
@@ -333,11 +333,11 @@ class ThermoTest(ut.TestCase):
                 for i in range(n):
                     ind = i + k * n
                     # Just some random forces
-                    f[ind,:] = self.generate_vec_ranged_rnd(-0.5, 500.)
+                    f[ind,:] = uniform(-250, 250., 3)
                     system.part[ind].ext_force = f[ind,:]
                     if "ROTATION" in espressomd.features():
                         # Just some random torques
-                        tor[ind,:] = self.generate_vec_ranged_rnd(-0.5, 500.)
+                        tor[ind,:] = uniform(-250, 250., 3)
                         system.part[ind].ext_torque = tor[ind,:]
                         # Let's set the dipole perpendicular to the torque
                         if "DIPOLES" in espressomd.features():
@@ -602,7 +602,7 @@ class ThermoTest(ut.TestCase):
             system.thermostat.set_brownian(kT=self.kT, gamma=self.gamma_global)
             # Actual integration and validation run
             self.state_print(check = 'BD: check_dissipation_viscous_drag')
-            self.check_dissipation_viscous_drag(tol = 1E-10)
+            self.check_dissipation_viscous_drag(n, tol = 1E-10)
 
     # Test case 0.1: no particle specific values / fluctuation & dissipation
     # Same particle and thermostat parameters for LD and BD are required in order
