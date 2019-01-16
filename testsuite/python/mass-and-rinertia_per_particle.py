@@ -65,12 +65,12 @@ class ThermoTest(ut.TestCase):
     @classmethod
     def setUpClass(cls):
         # Handle a random generator seeding
-        #rnd_gen = random.SystemRandom()
+        rnd_gen = random.SystemRandom()
         #seed1 = int(200 * rnd_gen.random())
         seed1 = 15
         np.random.seed(seed1)
-        #seed2 = int(200 * rnd_gen.random())
-        seed2 = 42
+        seed2 = int(200 * rnd_gen.random())
+        #seed2 = 42
         # The Espresso system configuration
         cls.system.seed = [s * seed2 for s in range(cls.system.cell_system.get_state()["n_nodes"])]
         cls.system.cell_system.set_domain_decomposition(use_verlet_lists=True)
@@ -629,10 +629,10 @@ class ThermoTest(ut.TestCase):
     def test_case_01(self):
         system = self.system
         # Each of 2 kind of particles will be represented by n instances:
-        n = 150
+        n = int(1E4)
         therm_steps = 2
         # Divided to a number of integration steps per loop
-        loops = int(1E4) / 50
+        loops = int(5E3) / 50
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
