@@ -3,6 +3,7 @@ import math
 import numpy as np
 from numpy.random import seed, uniform
 import unittest as ut
+import random
 import espressomd
 import tests_common
 
@@ -17,8 +18,6 @@ class RotDiffAniso(ut.TestCase):
     round_error_prec = 1E-14
     # Handle for espresso system
     system = espressomd.System(box_l=[1.0, 1.0, 1.0])
-    system.cell_system.skin = 5.0
-    system.seed = range(system.cell_system.get_state()["n_nodes"]) 
 
     # The NVT thermostat parameters
     kT = 0.0
@@ -29,11 +28,34 @@ class RotDiffAniso(ut.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        np.random.seed(42)
+        # Handle a random generator seeding
+        rnd_gen = random.SystemRandom()
+        #seed1 = int(200 * rnd_gen.random())
+        seed1 = 42
+        np.random.seed(seed1)
+        seed2 = int(200 * rnd_gen.random())
+        #seed2 = 42
+        # The Espresso system configuration
+        cls.system.seed = [s * seed2 for s in range(cls.system.cell_system.get_state()["n_nodes"])]
+        cls.system.cell_system.set_domain_decomposition(use_verlet_lists=True)
+        cls.system.cell_system.skin = 5.0
 
     def setUp(self):
         self.system.time = 0.0
         self.system.part.clear()
+
+    def set_initial_cond(self):
+        """
+        Set all the particles to zero coordinates and velocities; same for time.
+        The quaternion is set to default value.
+
+        """
+        system = self.system
+        system.time = 0.0
+        system.part[:].pos = np.zeros((3))
+        system.part[:].v = np.zeros((3))
+        system.part[:].omega_body = np.zeros((3))
+        system.part[:].quat = np.array([1., 0., 0., 0.])
 
     def add_particles_setup(self, n):
         """
@@ -120,7 +142,8 @@ class RotDiffAniso(ut.TestCase):
 
         # Time
         # The time step should be less than t0 ~ mass / gamma
-        self.system.time_step = 3E-3
+        # self.system.time_step = 3E-3
+        self.system.time_step = 3E-4
 
         # Space
         box = 10.0
@@ -150,7 +173,8 @@ class RotDiffAniso(ut.TestCase):
         #dt0 = self.J / self.gamma_global
 
         # Thermalizing...
-        therm_steps = 100
+        #therm_steps = 100
+        therm_steps = int(1E3)
         self.system.integrator.run(therm_steps)
 
         # Measuring...
@@ -180,6 +204,8 @@ class RotDiffAniso(ut.TestCase):
         self.system.time = 0.0
         int_steps = 20
         loops = 100
+        print('\n t | j | i | dcosjj | dcosjj2 | dcosijpp | dcosijnn | dcosij2')
+        print('\n ============================================================')
         for step in range(loops):
             self.system.integrator.run(steps=int_steps)
             dcosjj = np.zeros((3))
@@ -343,6 +369,14 @@ class RotDiffAniso(ut.TestCase):
                         j,
                         dcosjj2_dev[j]))
                 for i in range(3):
+                    print('\n {0},{1},{2},{3},{4},{5},{6},{7}'.format(
+                        self.system.time,j,i,
+                        dcosjj[j]/dcosjj_validate[j],
+                        dcosjj2[j]/dcosjj2_validate[j],
+                        dcosijpp[i, j]/dcosijpp_validate[i, j],
+                        dcosijnn[i, j]/dcosijnn_validate[i, j],
+                        dcosij2[i, j]/dcosij2_validate[i, j]
+                        ))
                     if i != j:
                         self.assertLessEqual(
                             abs(
@@ -363,35 +397,42 @@ class RotDiffAniso(ut.TestCase):
                             msg='Relative deviation dcosij2_dev[{0},{1}] in a rotational diffusion is too large: {2}'.format(
                                 i, j, dcosij2_dev[i, j]))
 
+    def state_print(self, check):
+        system = self.system
+        print('\n \n', check)
+        #print('\n', system.thermostat.get_state())
+        thermo_state = system.thermostat.get_state()
+        print('\n kT={0}, gamma={1}, type={2}'.format(thermo_state[0]["kT"], thermo_state[0]["gamma"], thermo_state[0]["type"]))
+        part = system.part[0]
+        print('\n mass={0} rintertia={1}'.format(part.mass, part.rinertia))
+
     def test_case_00(self):
-        n = 800
+        n = int(1.E3)
         self.rot_diffusion_param_setup()
         self.set_anisotropic_param()
         self.add_particles_setup(n)
         self.system.thermostat.set_langevin(
             kT=self.kT, gamma=self.gamma_global)
         # Actual integration and validation run
+        self.state_print(check = 'LD: check_rot_diffusion (aniso)')
         self.check_rot_diffusion(n)
 
     def test_case_01(self):
-        n = 800
+        n = int(1.E3)
         self.rot_diffusion_param_setup()
         self.set_isotropic_param()
         self.add_particles_setup(n)
         self.system.thermostat.set_langevin(
             kT=self.kT, gamma=self.gamma_global)
         # Actual integration and validation run
+        self.state_print(check = 'LD: check_rot_diffusion (iso)')
         self.check_rot_diffusion(n)
-
-    def test_case_10(self):
-        n = 800
-        self.rot_diffusion_param_setup()
-        self.set_isotropic_param()
-        self.add_particles_setup(n)
+        self.set_initial_cond()
         self.system.thermostat.turn_off()
         self.system.thermostat.set_brownian(
             kT=self.kT, gamma=self.gamma_global)
         # Actual integration and validation run
+        self.state_print(check = 'BD: check_rot_diffusion (iso)')
         self.check_rot_diffusion(n)
 
 if __name__ == '__main__':
