@@ -226,7 +226,7 @@ class ThermoTest(ut.TestCase):
         self.system.time_step = 0.03
 
         # Space
-        box = 10.0
+        box = 1.0E4
         self.system.box_l = box, box, box
         if espressomd.has_features(("PARTIAL_PERIODIC",)):
             self.system.periodicity = 0, 0, 0
