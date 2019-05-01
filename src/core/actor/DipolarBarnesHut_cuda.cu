@@ -500,7 +500,7 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
 
   // Assume no missing children:
   missing = 0;
-  //__syncthreads(); // throttle
+  __syncthreads(); // throttle
   // threads sync related
   lps = 0;
   // Iterate over all cells (not particles) assigned to the thread:
