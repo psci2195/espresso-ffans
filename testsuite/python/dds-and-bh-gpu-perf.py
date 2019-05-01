@@ -163,13 +163,13 @@ class BHGPUPerfTest(ut.TestCase):
             print("dt_dds_gpu = {0}".format(dt_dds_gpu))
             print("dt_bh_gpu = {0}".format(dt_bh_gpu))
 
-            #self.system.integrator.run(steps=0, recalc_forces=True)
+            self.system.integrator.run(steps=0, recalc_forces=True)
 
             del bh_gpu
             for i in range(len(self.system.actors.active_actors)):
                 self.system.actors.remove(self.system.actors.active_actors[i])
             
-            self.system.integrator.run(steps=0, recalc_forces=True)
+            #self.system.integrator.run(steps=0, recalc_forces=True)
             
             self.system.part.clear()
 
