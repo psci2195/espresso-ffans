@@ -664,7 +664,7 @@ __global__ __launch_bounds__(THREADS4, FACTOR4) void sortKernel() {
         if (ch >= bhpara->nbodies) {
           // child is a cell
           bhpara->start[ch] = start;  // set start ID of child
-          __threadfence();
+          //__threadfence();
           start += bhpara->count[ch]; // add # of bodies in subtree
         } else if (ch >= 0) {
           // Child is a body.
