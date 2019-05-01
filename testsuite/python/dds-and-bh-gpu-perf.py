@@ -172,7 +172,7 @@ class BHGPUPerfTest(ut.TestCase):
         if (self.system.cell_system.get_state()["n_nodes"] > 1):
             print("NOTE: Ignoring testcase for n_nodes > 1")
         else:
-            for s in range(50):
+            for s in range(200):
 		print("s = {0}".format(s))
                 self.run_test_case(s)
 
