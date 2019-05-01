@@ -506,7 +506,7 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
   // Iterate over all cells (not particles) assigned to the thread:
   while (k <= bhpara->nnodes) {
     if (lps++ > THREADS3 * 2) {
-      *bhpara->max_lps += lps;
+      *bhpara->max_lps = lps;
       __threadfence();
     }
     if (bhpara->mass[k] < 0.) {
@@ -664,6 +664,7 @@ __global__ __launch_bounds__(THREADS4, FACTOR4) void sortKernel() {
         if (ch >= bhpara->nbodies) {
           // child is a cell
           bhpara->start[ch] = start;  // set start ID of child
+          __threadfence();
           start += bhpara->count[ch]; // add # of bodies in subtree
         } else if (ch >= 0) {
           // Child is a body.
