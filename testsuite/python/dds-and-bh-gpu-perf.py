@@ -101,11 +101,13 @@ class BHGPUPerfTest(ut.TestCase):
             del dds_gpu
             self.system.actors.clear()
 
-            #self.system.integrator.run(steps=0, recalc_forces=True)
+            self.system.integrator.run(steps=0, recalc_forces=True)
+            self.system.integrator.run(steps=0, recalc_forces=True)
             bh_gpu = espressomd.magnetostatics.DipolarBarnesHutGpu(
                 prefactor=pf_bh_gpu, epssq=400.0, itolsq=36.0)
             self.system.actors.add(bh_gpu)
             t1 = tm.time()
+            self.system.integrator.run(steps=0, recalc_forces=True)
             self.system.integrator.run(steps=0, recalc_forces=True)
             t2 = tm.time()
             dt_bh_gpu = t2 - t1
@@ -161,7 +163,7 @@ class BHGPUPerfTest(ut.TestCase):
             print("dt_dds_gpu = {0}".format(dt_dds_gpu))
             print("dt_bh_gpu = {0}".format(dt_bh_gpu))
 
-            #self.system.integrator.run(steps=0, recalc_forces=True)
+            self.system.integrator.run(steps=0, recalc_forces=True)
 
             del bh_gpu
             for i in range(len(self.system.actors.active_actors)):
