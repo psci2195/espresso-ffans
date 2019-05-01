@@ -621,6 +621,7 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
     } else {
       k += inc;
     }
+    __syncthreads(); // throttle
   } // while
 }
 
