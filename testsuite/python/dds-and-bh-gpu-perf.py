@@ -36,7 +36,7 @@ class BHGPUPerfTest(ut.TestCase):
     system = espressomd.System(box_l=[10.0, 10.0, 10.0])
 
     def vectorsTheSame(self, a, b):
-        tol = 15E-2
+        tol = 20E-2
         vec_len = la.norm(a - b)
         rel = 2 * vec_len / (la.norm(a) + la.norm(b))
         return rel <= tol
