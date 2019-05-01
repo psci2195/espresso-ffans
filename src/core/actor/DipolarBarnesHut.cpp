@@ -41,7 +41,10 @@ void activate_dipolar_barnes_hut(float epssq, float itolsq) {
 }
 
 void deactivate_dipolar_barnes_hut() {
+  BHData bh_data;
   if (dipolarBarnesHut) {
+    bh_data = dipolarBarnesHut -> getBHdata();
+    freeBHmem(&bh_data);
     forceActors.remove(dipolarBarnesHut.get());
     energyActors.remove(dipolarBarnesHut.get());
     dipolarBarnesHut.reset();
