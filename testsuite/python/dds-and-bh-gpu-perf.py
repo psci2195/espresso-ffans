@@ -47,7 +47,7 @@ class BHGPUPerfTest(ut.TestCase):
             self.system.part[i].omega_body = np.array([0.0, 0.0, 0.0])
 
     def run_test_case(self):
-        seed(1)
+        seed(14)
     
         pf_bh_gpu = 2.34
         pf_dds_gpu = 3.524
@@ -77,25 +77,6 @@ class BHGPUPerfTest(ut.TestCase):
                 part_dip[2] = costheta * dipole_modulus
                 self.system.part.add(id=i, type=0, pos=part_pos, dip=part_dip, v=np.array(
                     [0, 0, 0]), omega_body=np.array([0, 0, 0]))
-
-            self.system.non_bonded_inter[0, 0].lennard_jones.set_params(
-                epsilon=10.0, sigma=0.5,
-                cutoff=0.55, shift="auto")
-            self.system.thermostat.set_langevin(kT=0.0, gamma=10.0, seed=42)
-
-            self.system.integrator.set_steepest_descent(
-                f_max=0.0, gamma=0.1, max_displacement=0.1)
-            self.system.integrator.run(500)
-            self.stopAll()
-            self.system.integrator.set_vv()
-
-            self.system.non_bonded_inter[0, 0].lennard_jones.set_params(
-                epsilon=0.0, sigma=0.0,
-                cutoff=-1, shift=0.0)
-
-            self.system.cell_system.skin = 0.0
-            self.system.time_step = 0.01
-            self.system.thermostat.turn_off()
 
             # gamma should be zero in order to avoid the noise term in force
             # and torque
