@@ -125,6 +125,15 @@ class BHGPUPerfTest(ut.TestCase):
             force_mag_average /= n
             torque_mag_average /= n
 
+            # expected cutoff for a large number of particles (>50K).
+            # Most of particles are in the bulk center and their
+            # forces/torques are close to zero cause isotropic surrounding
+            # is compensated. Corresponding small forces are more related
+            # to a numerical and summation restriction,
+            # multipole effects of octants, etc. These forces/torques
+            # are small, hence their physical effect is negligible.
+            # These small forces already contributes a lot to the averages,
+            # hence a real tolerance is much better than 15%.
             cutoff = 15E-2
 
             # compare
