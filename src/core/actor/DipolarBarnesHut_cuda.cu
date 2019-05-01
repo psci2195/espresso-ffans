@@ -500,7 +500,7 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
 
   // Assume no missing children:
   missing = 0;
-  __syncthreads(); // throttle
+  //__syncthreads(); // throttle
   // threads sync related
   lps = 0;
   // Iterate over all cells (not particles) assigned to the thread:
@@ -613,7 +613,7 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
         __threadfence(); // make sure data are visible before setting
         //                    // mass
         bhpara->mass[k] = cm;
-        __threadfence();
+        //__threadfence();
         k += inc;
         lps = 0;
       }
@@ -621,7 +621,7 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
     } else {
       k += inc;
     }
-    __syncthreads(); // throttle
+    //__syncthreads(); // throttle
   } // while
 }
 
