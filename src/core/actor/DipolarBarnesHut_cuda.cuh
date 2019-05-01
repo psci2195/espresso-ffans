@@ -92,6 +92,9 @@ void setBHPrecision(float *epssq, float *itolsq);
 // needed.
 void allocBHmemCopy(int nbodies, BHData *bh_data);
 
+// Free the GPU device memory.
+void freeBHmem(BHData *bh_data);
+
 // Populating of array pointers allocated in GPU device before.
 // Copy the particle data to the Barnes-Hut related arrays.
 void fillConstantPointers(float *r, float *dip, BHData bh_data);

@@ -1267,6 +1267,44 @@ void allocBHmemCopy(int nbodies, BHData *bh_data) {
       cudaMalloc(&(bh_data->u), 3 * (bh_data->nnodes + 1) * sizeof(float)));
 }
 
+// Free the GPU device memory.
+void freeBHmem(BHData *bh_data) {
+
+  if (bh_data->err != 0)
+    cuda_safe_mem(cudaFree(bh_data->err));
+  if (bh_data->max_lps != 0)
+    cuda_safe_mem(cudaFree(bh_data->max_lps));
+  if (bh_data->child != 0)
+    cuda_safe_mem(cudaFree(bh_data->child));
+  if (bh_data->count != 0)
+    cuda_safe_mem(cudaFree(bh_data->count));
+  if (bh_data->start != 0)
+    cuda_safe_mem(cudaFree(bh_data->start));
+  if (bh_data->sort != 0)
+    cuda_safe_mem(cudaFree(bh_data->sort));
+  // Weight coefficients of m_bhnnodes nodes: both particles and octant cells
+  if (bh_data->mass != 0)
+    cuda_safe_mem(cudaFree(bh_data->mass));
+  // n particles have unitary weight coefficients.
+  // Cells will be defined with -1 later.
+  // (max[3*i], max[3*i+1], max[3*i+2])
+  // are the octree box dynamical spatial constraints
+  // this array is updating per each block at each interaction calculation
+  // within the boundingBoxKernel
+  if (bh_data->maxp != 0)
+    cuda_safe_mem(cudaFree(bh_data->maxp));
+  // (min[3*i], min[3*i+1], min[3*i+2])
+  // are the octree box dynamical spatial constraints
+  // this array is updating per each block at each interaction calculation
+  // within the boundingBoxKernel
+  if (bh_data->minp != 0)
+    cuda_safe_mem(cudaFree(bh_data->minp));
+  if (bh_data->r != 0)
+    cuda_safe_mem(cudaFree(bh_data->r));
+  if (bh_data->u != 0)
+    cuda_safe_mem(cudaFree(bh_data->u));
+}
+
 // Populating of array pointers allocated in GPU device before.
 // Copy the particle data to the Barnes-Hut related arrays.
 void fillConstantPointers(float *r, float *dip, BHData bh_data) {

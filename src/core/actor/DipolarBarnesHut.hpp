@@ -60,6 +60,10 @@ public:
     allocBHmemCopy(s.npart_gpu(), &m_bh_data);
   };
 
+  ~DipolarBarnesHut() {
+    freeBHmem(&m_bh_data);
+  };
+
   void computeForces(SystemInterface &s) override {
     fillConstantPointers(s.rGpuBegin(), s.dipGpuBegin(), m_bh_data);
     initBHgpu(m_bh_data.blocks);
