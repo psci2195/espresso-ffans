@@ -474,8 +474,7 @@ __global__ __launch_bounds__(THREADS2, FACTOR2) void treeBuildingKernel() {
 /******************************************************************************/
 
 __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
-  int i, j, k, l, im, ch, inc, missing, missing_max, cnt, bottom, lps;
-  int iteration, repeat_flag;
+  int i, j, k, l, ch, inc, missing, cnt, bottom, lps;
   // the node "mass" and its count respectively:
   float m, cm;
   // position of equivalent total dipole and its magnitude:
@@ -501,8 +500,6 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
 
   // Assume no missing children:
   missing = 0;
-  iteration = 0;
-  repeat_flag = 0;
   __syncthreads(); // throttle
   // threads sync related
   lps = 0;
@@ -513,7 +510,6 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
       __threadfence();
     }
     if (bhpara->mass[k] < 0.) {
-      iteration++;
       if (missing == 0) {
         // New cell, so initialize:
         cm = 0.0f;
@@ -565,7 +561,6 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
             j++;
           } // if (ch >= 0)
         }
-        missing_max = missing;
         // Count of childs:
         cnt += j;
       }
@@ -573,33 +568,31 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
       //__syncthreads();    // throttle
 
       if (missing != 0) {
-        for (im = 0; im < missing_max; im++) {
-          // poll missing child
-          ch = child[im * THREADS3 + threadIdx.x];
-          if (ch >= 0) {
-            m = bhpara->mass[ch];
-            // Is a child the particle? Only particles have non-negative mass
-            // initialized originally. Another option: a cell which already
-            // aggregated masses of other cells and particles.
-            if (m >= 0.0f) {
-              // child is now ready
-              missing--;
-              child[im * THREADS3 + threadIdx.x] = -1;
-              // The child is a cell, not a body (ch >= nbodiesd).
-              if (ch >= bhpara->nbodies) {
-                // count bodies (needed later)
-                cnt += bhpara->count[ch] - 1;
-              }
-              // add child's contribution
-              cm += m;
-              for (l = 0; l < 3; l++) {
-                p[l] += bhpara->r[3 * ch + l] * m;
-                u[l] += bhpara->u[3 * ch + l];
-              }
-            } // m >= 0.0f
-          }   // ch >= 0
-        }     // missing_max
-        // repeat until we are done or child is not ready
+        // poll missing child
+        ch = child[(missing - 1) * THREADS3 + threadIdx.x];
+        if (ch >= 0) {
+          m = bhpara->mass[ch];
+          // Is a child the particle? Only particles have non-negative mass
+          // initialized originally. Another option: a cell which already
+          // aggregated masses of other cells and particles.
+          if (m >= 0.0f) {
+            // child is now ready
+            missing--;
+            child[missing * THREADS3 + threadIdx.x] = -1;
+            // The child is a cell, not a body (ch >= nbodiesd).
+            if (ch >= bhpara->nbodies) {
+              // count bodies (needed later)
+              cnt += bhpara->count[ch] - 1;
+            }
+            // add child's contribution
+            cm += m;
+            for (l = 0; l < 3; l++) {
+              p[l] += bhpara->r[3 * ch + l] * m;
+              u[l] += bhpara->u[3 * ch + l];
+            }
+          } // m >= 0.0f
+        }   // ch >= 0
+        // repeat (through the parent "while") until we are done or child is not ready
       }
 
       //__syncthreads(); // throttle
@@ -622,23 +615,11 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
         bhpara->mass[k] = cm;
         __threadfence();
         k += inc;
-        iteration = 0;
         lps = 0;
       }
       //__syncthreads(); // throttle
-      if (iteration > THREADS3 + 1) {
-        k += inc;
-        repeat_flag = 1;
-        iteration = 0;
-        missing = 0;
-      }
     } else {
       k += inc;
-    }
-    if ((k > bhpara->nnodes) && (repeat_flag)) {
-      repeat_flag = 0;
-      missing = 0;
-      k = bottom + threadIdx.x + blockIdx.x * blockDim.x;
     }
   } // while
 }
