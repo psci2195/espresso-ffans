@@ -506,8 +506,9 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
   // Iterate over all cells (not particles) assigned to the thread:
   while (k <= bhpara->nnodes) {
     if (lps++ > THREADS3) {
-      *bhpara->max_lps = lps;
-      __threadfence();
+      //*bhpara->max_lps = lps;
+      //__threadfence();
+      atomicInc((unsigned int *)bhpara->max_lps, THREADS3 * 100);
     }
     if (bhpara->mass[k] < 0.) {
       if (missing == 0) {
