@@ -46,20 +46,20 @@ class BHGPUPerfTest(ut.TestCase):
             self.system.part[i].v = np.array([0.0, 0.0, 0.0])
             self.system.part[i].omega_body = np.array([0.0, 0.0, 0.0])
 
-    def run_test_case(self):
-        seed(14)
+    def run_test_case(self, s1):
+        seed(s1)
     
         pf_bh_gpu = 2.34
         pf_dds_gpu = 3.524
         ratio_dds_gpu_bh_gpu = pf_dds_gpu / pf_bh_gpu
-        l = 15
+        l = 10
         self.system.periodicity = [0, 0, 0]
         self.system.time_step = 1E-4
         self.system.cell_system.skin = 0.1
 
         part_dip = np.zeros((3))
 
-        for n in [26487, 147543]:
+        for n in [26487, 147543, 500, 100, 50, 100]:
             force_mag_average = 0.0
             torque_mag_average = 0.0
             dipole_modulus = 1.3
@@ -125,7 +125,7 @@ class BHGPUPerfTest(ut.TestCase):
             force_mag_average /= n
             torque_mag_average /= n
 
-            cutoff = 1E-2
+            cutoff = 15E-2
 
             # compare
             for i in range(n):
@@ -145,7 +145,7 @@ class BHGPUPerfTest(ut.TestCase):
                                     msg='Forces on particle do not match: i={0} dds_gpu_f={1} ratio_dds_gpu_bh_gpu*bhgpu_f={2}'.format(i, np.array(dds_gpu_f[i]), ratio_dds_gpu_bh_gpu * np.array(bhgpu_f[i])))
             self.assertTrue(
                 abs(dds_gpu_e - bhgpu_e * ratio_dds_gpu_bh_gpu) <= abs(
-                    1E-3 * dds_gpu_e),
+                    15E-2 * dds_gpu_e),
                             msg='Energies for dawaanr {0} and dds_gpu {1} do not match.'.format(dds_gpu_e, ratio_dds_gpu_bh_gpu * bhgpu_e))
 
             print("=== Performance comparison ===")
@@ -163,7 +163,9 @@ class BHGPUPerfTest(ut.TestCase):
         if (self.system.cell_system.get_state()["n_nodes"] > 1):
             print("NOTE: Ignoring testcase for n_nodes > 1")
         else:
-            self.run_test_case()
+            for s in range(50):
+		print("s = {0}".format(s))
+                self.run_test_case(s)
 
 if __name__ == '__main__':
     ut.main()
