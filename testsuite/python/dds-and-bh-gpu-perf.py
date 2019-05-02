@@ -81,12 +81,13 @@ class BHGPUPerfTest(ut.TestCase):
             # gamma should be zero in order to avoid the noise term in force
             # and torque
             self.system.thermostat.set_langevin(kT=1.297, gamma=0.0, seed=42)
+            self.system.integrator.run(steps=0, recalc_forces=True)
 
             dds_gpu = espressomd.magnetostatics.DipolarDirectSumGpu(
                 prefactor=pf_dds_gpu)
             self.system.actors.add(dds_gpu)
             t1 = tm.time()
-            self.system.integrator.run(steps=0, recalc_forces=False)
+            #self.system.integrator.run(steps=0, recalc_forces=False)
             t2 = tm.time()
             dt_dds_gpu = t2 - t1
 
@@ -107,7 +108,7 @@ class BHGPUPerfTest(ut.TestCase):
                 prefactor=pf_bh_gpu, epssq=400.0, itolsq=36.0)
             self.system.actors.add(bh_gpu)
             t1 = tm.time()
-            self.system.integrator.run(steps=0, recalc_forces=False)
+            #self.system.integrator.run(steps=0, recalc_forces=False)
             #self.system.integrator.run(steps=0, recalc_forces=True)
             t2 = tm.time()
             dt_bh_gpu = t2 - t1
@@ -163,7 +164,7 @@ class BHGPUPerfTest(ut.TestCase):
             print("dt_dds_gpu = {0}".format(dt_dds_gpu))
             print("dt_bh_gpu = {0}".format(dt_bh_gpu))
 
-            self.system.integrator.run(steps=0, recalc_forces=True)
+            #self.system.integrator.run(steps=0, recalc_forces=True)
 
             del bh_gpu
             for i in range(len(self.system.actors.active_actors)):
