@@ -86,7 +86,7 @@ class BHGPUPerfTest(ut.TestCase):
                 prefactor=pf_dds_gpu)
             self.system.actors.add(dds_gpu)
             t1 = tm.time()
-            #self.system.integrator.run(steps=0, recalc_forces=True)
+            self.system.integrator.run(steps=0, recalc_forces=False)
             t2 = tm.time()
             dt_dds_gpu = t2 - t1
 
@@ -107,7 +107,7 @@ class BHGPUPerfTest(ut.TestCase):
                 prefactor=pf_bh_gpu, epssq=400.0, itolsq=36.0)
             self.system.actors.add(bh_gpu)
             t1 = tm.time()
-            #self.system.integrator.run(steps=0, recalc_forces=True)
+            self.system.integrator.run(steps=0, recalc_forces=False)
             #self.system.integrator.run(steps=0, recalc_forces=True)
             t2 = tm.time()
             dt_bh_gpu = t2 - t1
