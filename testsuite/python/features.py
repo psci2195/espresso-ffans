@@ -1,5 +1,4 @@
-#
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -15,15 +14,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+
+import unittest as ut
+from espressomd import has_features, code_info
 
 
-from __future__ import print_function, absolute_import
-include "myconfig.pxi"
+class Features(ut.TestCase):
 
-from libcpp.vector cimport vector
-from .utils cimport Vector3d
-from .c_analyze cimport PartCfg, partCfg
+    def test_has_features(self):
+        for feature in code_info.features():
+            self.assertTrue(has_features(feature))
 
-cdef extern from "polymer.hpp":
-    vector[vector[Vector3d]] draw_polymer_positions(PartCfg &, int n_polymers, int beads_per_polymer, double bond_length, vector[Vector3d] & start_positions, double min_distance, int max_tries, int use_bond_angle, double bond_angle, int respect_constraints, int seed) except +
+        for feature in code_info.all_features() - set(code_info.features()):
+            self.assertFalse(has_features(feature))
+
+        with self.assertRaises(RuntimeError) as _:
+            has_features("NotAFeature")
+
+if __name__ == '__main__':
+    ut.main()
