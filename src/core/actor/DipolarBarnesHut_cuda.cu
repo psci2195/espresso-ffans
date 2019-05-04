@@ -266,15 +266,13 @@ __global__ __launch_bounds__(THREADS2, FACTOR2) void treeBuildingKernel() {
     ch = bhpara->child[n * 8 + j];
 
     ///// Global memory writing related threads sync
-    if (lps++ > THREADS2 * bhpara->nnodes) {
+    if (lps++ > THREADS2 * 6) {
       // AMD-specific threads sync
 #if defined(__HIPCC__) and not defined(__CUDACC__)
       atomicInc((unsigned int *)bhpara->max_lps, 0);
 #else
       *bhpara->max_lps = lps;
 #endif
-      *bhpara->err = 100; // deadlock
-      break;
     }
     //.. now wait for global memory updates. This impacts on race conditions and
     // frameworks level optimizations. Further kernels contain a similar code
@@ -507,11 +505,9 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
   lps = 0;
   // Iterate over all cells (not particles) assigned to the thread:
   while (k <= bhpara->nnodes) {
-    if (lps++ > THREADS3 * bhpara->nnodes) {
+    if (lps++ > THREADS3 * 6) {
       *bhpara->max_lps = lps;
       __threadfence();
-      *bhpara->err = 100; // deadlock
-      break;
     }
     if (bhpara->mass[k] < 0.) {
       if (missing == 0) {
@@ -656,11 +652,9 @@ __global__ __launch_bounds__(THREADS4, FACTOR4) void sortKernel() {
   while (k >= bottom) {
     start = bhpara->start[k];
     // Threads sync related
-    if (lps++ > THREADS4 * bhpara->nnodes) {
+    if (lps++ > THREADS4 * 6) {
       *bhpara->max_lps = lps;
       __threadfence();
-      *bhpara->err = 100; // deadlock
-      break;
     }
     // Let's start from the root which has only startd=0 defined
     // in boundingBoxKernel. All other bodies and cells have -1.
