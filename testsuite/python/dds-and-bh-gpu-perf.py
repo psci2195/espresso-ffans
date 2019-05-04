@@ -59,7 +59,7 @@ class BHGPUPerfTest(ut.TestCase):
 
         part_dip = np.zeros((3))
 
-        for n in [26487, 147543]:
+        for n in [160000]:
             force_mag_average = 0.0
             torque_mag_average = 0.0
             dipole_modulus = 1.3
