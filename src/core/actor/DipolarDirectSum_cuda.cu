@@ -307,6 +307,7 @@ void DipolarDirectSum_kernel_wrapper_force(dds_float k, int n, float *pos,
   // printf("box_l: %f %f %f\n",box_l[0],box_l[1],box_l[2]);
   KERNELCALL(DipolarDirectSum_kernel_force, grid, block, k, n, pos, dip, f,
              torque, box_l_gpu, periodic_gpu);
+  cuda_safe_mem(cudaDeviceSynchronize());
   cudaFree(box_l_gpu);
   cudaFree(periodic_gpu);
 }
@@ -348,7 +349,7 @@ void DipolarDirectSum_kernel_wrapper_energy(dds_float k, int n, float *pos,
   KERNELCALL_shared(DipolarDirectSum_kernel_energy, grid, block,
                     bs * sizeof(dds_float), k, n, pos, dip, box_l_gpu,
                     periodic_gpu, energySum);
-
+  cuda_safe_mem(cudaDeviceSynchronize());
   // printf(" Still here after energy kernel\n");
   // Sum the results of all blocks
   // One thread per block in the prev kernel
