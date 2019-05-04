@@ -266,7 +266,7 @@ __global__ __launch_bounds__(THREADS2, FACTOR2) void treeBuildingKernel() {
     ch = bhpara->child[n * 8 + j];
 
     ///// Global memory writing related threads sync
-    if (lps++ > THREADS2 * 6) {
+    if (lps++ > THREADS2 / 4) {
       // AMD-specific threads sync
 #if defined(__HIPCC__) and not defined(__CUDACC__)
       atomicInc((unsigned int *)bhpara->max_lps, 0);
@@ -505,7 +505,7 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
   lps = 0;
   // Iterate over all cells (not particles) assigned to the thread:
   while (k <= bhpara->nnodes) {
-    if (lps++ > THREADS3 * 6) {
+    if (lps++ > THREADS3 / 4) {
       *bhpara->max_lps = lps;
       __threadfence();
     }
@@ -652,7 +652,7 @@ __global__ __launch_bounds__(THREADS4, FACTOR4) void sortKernel() {
   while (k >= bottom) {
     start = bhpara->start[k];
     // Threads sync related
-    if (lps++ > THREADS4 * 6) {
+    if (lps++ > THREADS4 / 4) {
       *bhpara->max_lps = lps;
       __threadfence();
     }
