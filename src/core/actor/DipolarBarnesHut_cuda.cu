@@ -274,6 +274,10 @@ __global__ __launch_bounds__(THREADS2, FACTOR2) void treeBuildingKernel() {
       *bhpara->max_lps = lps;
 #endif
     }
+
+#if CUDA_VERSION >= 9000
+    __syncwarp();
+#endif
     //.. now wait for global memory updates. This impacts on race conditions and
     // frameworks level optimizations. Further kernels contain a similar code
     // fragment.
@@ -509,6 +513,9 @@ __global__ __launch_bounds__(THREADS3, FACTOR3) void summarizationKernel() {
       *bhpara->max_lps = lps;
       __threadfence();
     }
+#if CUDA_VERSION >= 9000
+    __syncwarp();
+#endif
     if (bhpara->mass[k] < 0.) {
       if (missing == 0) {
         // New cell, so initialize:
@@ -656,6 +663,9 @@ __global__ __launch_bounds__(THREADS4, FACTOR4) void sortKernel() {
       *bhpara->max_lps = lps;
       __threadfence();
     }
+#if CUDA_VERSION >= 9000
+    __syncwarp();
+#endif
     // Let's start from the root which has only startd=0 defined
     // in boundingBoxKernel. All other bodies and cells have -1.
     if (start >= 0) {
