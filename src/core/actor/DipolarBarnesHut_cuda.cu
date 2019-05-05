@@ -836,6 +836,7 @@ __global__ __launch_bounds__(THREADS5, FACTOR5) void forceCalculationKernel(
             // Check if all threads agree that cell is far enough away (or is a
             // body, i.e. n < nbodiesd).
 #if CUDA_VERSION >= 9000
+            __syncwarp();
             if ((n < bhpara->nbodies) ||
                 __all_sync(__activemask(), tmp >= dq[depth])) {
 #else
@@ -991,6 +992,7 @@ __global__ __launch_bounds__(THREADS5, FACTOR5) void energyCalculationKernel(
               tmp += dr[l] * dr[l];
             }
 #if CUDA_VERSION >= 9000
+            __syncwarp();
             if ((n < bhpara->nbodies) ||
                 __all_sync(
                     __activemask(),
