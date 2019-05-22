@@ -29,14 +29,16 @@ class RotDiffAniso(ut.TestCase):
     @classmethod
     def setUpClass(cls):
         # Handle a random generator seeding
-        rnd_gen = random.SystemRandom()
+        #rnd_gen = random.SystemRandom()
         #seed1 = int(200 * rnd_gen.random())
-        seed1 = 42
-        np.random.seed(seed1)
-        seed2 = int(200 * rnd_gen.random())
+        #seed1 = 42
+        #np.random.seed(seed1)
+        #seed2 = int(200 * rnd_gen.random())
         #seed2 = 42
         # The Espresso system configuration
-        cls.system.seed = [s * seed2 for s in range(cls.system.cell_system.get_state()["n_nodes"])]
+        #cls.system.seed = [s * seed2 for s in range(cls.system.cell_system.get_state()["n_nodes"])]
+        cls.system.set_random_state_PRNG()
+        np.random.seed(seed=cls.system.seed)
         cls.system.cell_system.set_domain_decomposition(use_verlet_lists=True)
         cls.system.cell_system.skin = 5.0
 
