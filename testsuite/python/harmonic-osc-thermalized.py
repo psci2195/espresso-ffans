@@ -292,10 +292,14 @@ class HarmonicOscillatorThermalization(ut.TestCase):
         np.savetxt("acf_vel.dat", acf)
 
         # Integrate w. trapez rule
+        ratio_average = 0.
         for coord in 1, 2, 3:
             I = np.trapz(acf[:, coord], acf[:, 0])
             ratio = I / (kT / gamma[coord - 1])
             self.assertAlmostEqual(ratio, 0., delta=0.07)
+            ratio_average += ratio
+        ratio_average /= 3.
+        print("\n Green-Kubo-velocity: time_step={0} ratio={1}".format(self.system.time_step, ratio_average))
 
     def verify_diffusion_pos(self, p, corr, kT, gamma):
         c = corr
@@ -304,10 +308,14 @@ class HarmonicOscillatorThermalization(ut.TestCase):
         np.savetxt("acf_pos.dat", acf)
 
         # Integrate w. trapez rule
+        ratio_average = 0.
         for coord in 1, 2, 3:
             I = np.trapz(acf[:, coord], acf[:, 0])
             ratio = I
             self.assertAlmostEqual(ratio, 1., delta=0.07)
+            ratio_average += ratio
+        ratio_average /= 3.
+        print("\n Green-Kubo-like-position: time_step={0} ratio={1}".format(self.system.time_step, ratio_average))
 
 if __name__ == "__main__":
     ut.main()
