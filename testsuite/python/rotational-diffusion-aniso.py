@@ -18,6 +18,8 @@ class RotDiffAniso(ut.TestCase):
     round_error_prec = 1E-14
     # Handle for espresso system
     system = espressomd.System(box_l=[1.0, 1.0, 1.0])
+    system.cell_system.skin = 5.0
+    system.seed = range(system.cell_system.get_state()["n_nodes"]) 
 
     # The NVT thermostat parameters
     kT = 0.0
@@ -226,29 +228,15 @@ class RotDiffAniso(ut.TestCase):
                     for i in range(3):
                         if i != j:
                             # the LHS of eq. (24) [Perrin1936].
-                            dcosijpp[
-                                i,
-                                j] += dir_cos[
-                                    i,
-                                    i] * dir_cos[
-                                        j,
-                                        j] + dir_cos[
-                                            i,
-                                            j] * dir_cos[
-                                                j,
-                                                i]
+                            dcosijpp[i, j] += dir_cos[i, i] * \
+                                dir_cos[j, j] + \
+                                              dir_cos[i, j] * \
+                                              dir_cos[j, i]
                             # the LHS of eq. (25) [Perrin1936].
-                            dcosijnn[
-                                i,
-                                j] += dir_cos[
-                                    i,
-                                    i] * dir_cos[
-                                        j,
-                                        j] - dir_cos[
-                                            i,
-                                            j] * dir_cos[
-                                                j,
-                                                i]
+                            dcosijnn[i, j] += dir_cos[i, i] * \
+                                dir_cos[j, j] - \
+                                dir_cos[i, j] * \
+                                dir_cos[j, i]
                             # the LHS of eq. (33) [Perrin1936].
                             dcosij2[i, j] += dir_cos[i, j]**2.0
             dcosjj /= n
@@ -316,8 +304,9 @@ class RotDiffAniso(ut.TestCase):
                     if i != j:
                         D1D1 += D[i] * D[j]
             D1D1 /= 6.0
-            # Technical workaround of a digital arithmetic issue for isotropic particle
-            if np.absolute((D0**2 - D1D1)/(D0**2 + D1D1)) < self.round_error_prec:
+            # Technical workaround of a digital arithmetic issue for isotropic
+            # particle
+            if np.absolute((D0**2 - D1D1) / (D0**2 + D1D1)) < self.round_error_prec:
                 D1D1 *= (1.0 - 2.0 * self.round_error_prec)
             # Eq. (32) [Perrin1936].
             dcosjj2_validate = 1. / 3. + (1. / 3.) * (1. + (D - D0) / (2. * np.sqrt(D0**2 - D1D1))) \
@@ -430,6 +419,14 @@ class RotDiffAniso(ut.TestCase):
         self.state_print(check = 'LD: check_rot_diffusion (iso)')
         self.check_rot_diffusion(n)
         self.set_initial_cond()
+        self.check_rot_diffusion(n)
+
+    # Brownian Dynamics / Isotropic
+    def test_case_10(self):
+        n = int(1.E3)
+        self.rot_diffusion_param_setup()
+        self.set_isotropic_param()
+        self.add_particles_setup(n)
         self.system.thermostat.turn_off()
         self.system.thermostat.set_brownian(
             kT=self.kT, gamma=self.gamma_global)
