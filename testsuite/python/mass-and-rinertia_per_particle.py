@@ -32,6 +32,9 @@ class ThermoTest(ut.TestCase):
     longMessage = True
     # Handle for espresso system
     system = espressomd.System(box_l=[1.0, 1.0, 1.0])
+    system.seed = [s * 15 for s in range(system.cell_system.get_state()["n_nodes"])]
+    system.cell_system.skin = 5.0
+
     # The NVT thermostat parameters
     kT = 0.0
     gamma_global = np.zeros((3))
@@ -199,6 +202,8 @@ class ThermoTest(ut.TestCase):
         It is used by the BD test cases only for the moment.
 
         """
+
+        system = self.system
         ## Time
         # Large time_step is OK for the BD by its definition & its benefits
         self.system.time_step = 17.0
@@ -228,7 +233,11 @@ class ThermoTest(ut.TestCase):
         self.system.time_step = 0.03
 
         # Space
-        box = 1.0E4
+        if "BROWNIAN_DYNAMICS" in espressomd.features():
+            # for large steps and multi-core run stability
+            box = 1E4
+        else:
+            box = 10.0
         self.system.box_l = box, box, box
         if espressomd.has_features(("PARTIAL_PERIODIC",)):
             self.system.periodicity = 0, 0, 0
