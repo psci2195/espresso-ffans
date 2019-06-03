@@ -247,7 +247,7 @@ class RotDiffAniso(ut.TestCase):
 
             # Actual comparison.
 
-            tolerance = 0.12
+            tolerance = 0.2
             # Too small values of the direction cosines are out of interest
             # compare to 0..1 range.
             min_value = 0.14
@@ -403,7 +403,7 @@ class RotDiffAniso(ut.TestCase):
         self.set_anisotropic_param()
         self.add_particles_setup(n)
         self.system.thermostat.set_langevin(
-            kT=self.kT, gamma=self.gamma_global)
+            kT=self.kT, gamma=self.gamma_global, seed=42)
         # Actual integration and validation run
         self.state_print(check = 'LD: check_rot_diffusion (aniso)')
         self.check_rot_diffusion(n)
@@ -414,7 +414,7 @@ class RotDiffAniso(ut.TestCase):
         self.set_isotropic_param()
         self.add_particles_setup(n)
         self.system.thermostat.set_langevin(
-            kT=self.kT, gamma=self.gamma_global)
+            kT=self.kT, gamma=self.gamma_global, seed=42)
         # Actual integration and validation run
         self.state_print(check = 'LD: check_rot_diffusion (iso)')
         self.check_rot_diffusion(n)
@@ -424,12 +424,12 @@ class RotDiffAniso(ut.TestCase):
     # Brownian Dynamics / Isotropic
     def test_case_10(self):
         n = int(1.E3)
+        self.system.thermostat.turn_off()
         self.rot_diffusion_param_setup()
         self.set_isotropic_param()
         self.add_particles_setup(n)
-        self.system.thermostat.turn_off()
         self.system.thermostat.set_brownian(
-            kT=self.kT, gamma=self.gamma_global)
+            kT=self.kT, gamma=self.gamma_global, seed=42)
         # Actual integration and validation run
         self.state_print(check = 'BD: check_rot_diffusion (iso)')
         self.check_rot_diffusion(n)
