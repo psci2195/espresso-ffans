@@ -28,8 +28,6 @@ from espressomd.observables import ParticleVelocities, ParticleBodyAngularVeloci
 from tests_common import single_component_maxwell
 
 
-@ut.skipIf(espressomd.has_features("THERMOSTAT_IGNORE_NON_VIRTUAL"),
-           "Skipped because of THERMOSTAT_IGNORE_NON_VIRTUAL")
 class HarmonicOscillatorThermalization(ut.TestCase):
 
     """Tests that Langevin thermostat applies to the harmonic oscillator
@@ -140,7 +138,7 @@ class HarmonicOscillatorThermalization(ut.TestCase):
 
         kT = 1.
         gamma = 1.
-        system.thermostat.set_langevin(kT=kT, gamma=gamma)
+        system.thermostat.set_langevin(kT=kT, gamma=gamma, seed = 42)
 
         # Warmup
         system.integrator.run(int(4E3))
@@ -153,7 +151,7 @@ class HarmonicOscillatorThermalization(ut.TestCase):
             system.part[:].v = np.zeros((3))
             system.part[:].omega_body = np.zeros((3))
             system.thermostat.turn_off()
-            system.thermostat.set_brownian(kT=kT, gamma=gamma)
+            system.thermostat.set_brownian(kT=kT, gamma=gamma, seed = 42)
             # Warmup
             # The BD does not require so the warmup. Only 1 step is enough.
             # More steps are taken just to be sure that they will not lead
@@ -209,14 +207,14 @@ class HarmonicOscillatorThermalization(ut.TestCase):
             if espressomd.has_features("PARTICLE_ANISOTROPY"):
                 # particle anisotropy and rotation
                 system.thermostat.set_langevin(
-                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_a)
+                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_a, seed = 42)
             else:
                 # Rotation without particle anisotropy
                 system.thermostat.set_langevin(
-                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_i)
+                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_i, seed = 42)
         else:
             # No rotation
-            system.thermostat.set_langevin(kT=kT, gamma=gamma)
+            system.thermostat.set_langevin(kT=kT, gamma=gamma, seed = 42)
 
         # system.cell_system.skin = 0.4
         system.integrator.run(int(1E4))
