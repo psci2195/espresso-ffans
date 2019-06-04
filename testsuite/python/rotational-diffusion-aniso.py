@@ -101,7 +101,8 @@ class RotDiffAniso(ut.TestCase):
         # classical Einstein-Smoluchowski equations of the diffusion
         # in a contrast of the eq. (10.2.26) [N. Pottier,
         # https://doi.org/10.1007/s10955-010-0114-6 (2010)].
-        self.gamma_global = 1E2 * uniform(0.35, 1.05, (3))
+        #self.gamma_global = 1E2 * uniform(0.35, 1.05, (3))
+        self.gamma_global = 1E2 * np.array([0.25, 1.0, 0.75])
 
         # Particles' properties
         # As far as the problem characteristic time is t0 ~ J / gamma
@@ -112,7 +113,8 @@ class RotDiffAniso(ut.TestCase):
         # It should be not very large, otherwise the thermalization will require
         # too much of the CPU time: the in silico time should clock over the
         # t0.
-        self.J = uniform(1.5, 16.5, (3))
+        #self.J = uniform(1.5, 16.5, (3))
+        self.J = np.array([0.15, 0.9, 0.55])
 
     def set_isotropic_param(self):
         """
@@ -125,12 +127,13 @@ class RotDiffAniso(ut.TestCase):
 
         # NVT thermostat
         # see the comments in set_anisotropic_param()
-        self.gamma_global[0] = 1E2 * uniform(0.35, 1.05, (1))
+        #self.gamma_global[0] = 1E2 * uniform(0.35, 1.05, (1))
+        self.gamma_global[0] = 1E2 * 0.6
         self.gamma_global[1] = self.gamma_global[0]
         self.gamma_global[2] = self.gamma_global[0]
         # Particles' properties
         # see the comments in set_anisotropic_param()
-        self.J[0] = uniform(1.5, 16.5, (1))
+        self.J[0] = 0.25
         self.J[1] = self.J[0]
         self.J[2] = self.J[0]
 
@@ -157,7 +160,8 @@ class RotDiffAniso(ut.TestCase):
 
         # NVT thermostat
         # Just some temperature range to cover by the test:
-        self.kT = uniform(1.5, 6.5)
+        #self.kT = uniform(1.5, 6.5)
+        self.kT = 1.0
 
     def check_rot_diffusion(self, n):
         """
@@ -208,8 +212,8 @@ class RotDiffAniso(ut.TestCase):
         self.system.time = 0.0
         int_steps = 20
         loops = 100
-        print('\n t | j | i | dcosjj | dcosjj2 | dcosijpp | dcosijnn | dcosij2')
-        print('\n ============================================================')
+        print('\n t | dcosjj | dcosjj2 | dcosijpp | dcosijnn | dcosij2')
+        print('\n ====================================================')
         for step in range(loops):
             self.system.integrator.run(steps=int_steps)
             dcosjj = np.zeros((3))
@@ -359,15 +363,17 @@ class RotDiffAniso(ut.TestCase):
                     msg='Relative deviation dcosjj2_dev[{0}] in a rotational diffusion is too large: {1}'.format(
                         j,
                         dcosjj2_dev[j]))
-                for i in range(3):
-                    print('\n {0},{1},{2},{3},{4},{5},{6},{7}'.format(
-                        self.system.time,j,i,
-                        dcosjj[j]/dcosjj_validate[j],
-                        dcosjj2[j]/dcosjj2_validate[j],
-                        dcosijpp[i, j]/dcosijpp_validate[i, j],
-                        dcosijnn[i, j]/dcosijnn_validate[i, j],
-                        dcosij2[i, j]/dcosij2_validate[i, j]
+               
+                print('{0},{1},{2},{3},{4},{5}'.format(
+                        self.system.time,
+                        dcosjj[0]/dcosjj_validate[0],
+                        dcosjj2[0]/dcosjj2_validate[0],
+                        dcosijpp[0, 1]/dcosijpp_validate[0, 1],
+                        dcosijnn[0, 1]/dcosijnn_validate[0, 1],
+                        dcosij2[0, 1]/dcosij2_validate[0, 1]
                         ))
+                
+                for i in range(3):
                     if i != j:
                         self.assertLessEqual(
                             abs(
@@ -396,6 +402,7 @@ class RotDiffAniso(ut.TestCase):
         print('\n kT={0}, gamma={1}, type={2}'.format(thermo_state[0]["kT"], thermo_state[0]["gamma"], thermo_state[0]["type"]))
         part = system.part[0]
         print('\n mass={0} rintertia={1}'.format(part.mass, part.rinertia))
+        print('time_step={0}'.format(system.time_step))
 
     def test_case_00(self):
         n = int(1.E3)

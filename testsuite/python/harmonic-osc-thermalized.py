@@ -63,6 +63,22 @@ class HarmonicOscillatorThermalization(ut.TestCase):
             k=hb_k, r_0=hb_r_0, r_cut=hb_r_cut)
         cls.system.bonded_inter.add(cls.hb)
 
+    def setUp(self):
+        self.system.time = 0.0
+        self.system.part.clear()
+        if "BROWNIAN_DYNAMICS" in espressomd.features():
+            self.system.thermostat.turn_off()
+
+    def state_print(self, check):
+        system = self.system
+        print('\n \n', check)
+        #print('\n', system.thermostat.get_state())
+        thermo_state = system.thermostat.get_state()
+        print('\n kT={0}, gamma={1}, type={2}'.format(thermo_state[0]["kT"], thermo_state[0]["gamma"], thermo_state[0]["type"]))
+        part = system.part[0]
+        print('\n mass={0} rintertia={1}'.format(part.mass, part.rinertia))
+        print('time_step={0}'.format(system.time_step))
+
     def check_velocity_distribution(self, vel, minmax, n_bins, error_tol, kT):
         """check the recorded particle distributions in vel againsta histogram with n_bins bins. Drop velocities outside minmax. Check individual histogram bins up to an accuracy of error_tol agaisnt the analytical result for kT."""
         for i in range(3):
@@ -166,7 +182,7 @@ class HarmonicOscillatorThermalization(ut.TestCase):
     def setup_diff_mass_rinertia(self, p):
         if espressomd.has_features("MASS"):
             # Beard's "k"
-            k = 1
+            k = 0.25
             p.mass = k
         if espressomd.has_features("ROTATION"):
             p.rotation = 1, 1, 1
@@ -259,8 +275,8 @@ class HarmonicOscillatorThermalization(ut.TestCase):
         # Cast gammas to vector, to make checks independent of
         # PARTICLE_ANISOTROPY
         gamma = np.ones(3) * gamma
-        self.verify_diffusion(p_global, corr_vel, kT, gamma)
-        self.verify_diffusion_pos(p_global, corr_pos, kT, gamma)
+        self.verify_diffusion(p_global, corr_vel, kT, gamma, check = "LD")
+        self.verify_diffusion_pos(p_global, corr_pos, kT, gamma, check = "LD")
 
         # Rotation
         if espressomd.has_features("ROTATION"):
@@ -275,7 +291,109 @@ class HarmonicOscillatorThermalization(ut.TestCase):
             #not relevant
             #self.verify_diffusion(p_global, corr_omega, kT, eff_gamma_rot)
 
-    def verify_diffusion(self, p, corr, kT, gamma):
+    # only for the correlated BD
+    def TODO_test_diffusion_bd(self):
+        """This tests rotational and translational diffusion coeff via
+        green-kubo-like integrals for velocities and positions
+        according to the harmonic oscillator known features"""
+        system = self.system
+        system.part.clear()
+
+        kT = 1.
+        dt = 0.1
+        system.time_step = dt
+
+        # Translational gamma. We cannot test per-component, if rotation is on,
+        # because body and space frames become different.
+        gamma = 1.
+
+        # Rotational gamma
+        gamma_rot_i = 1.
+        gamma_rot_a = 1., 1., 1.
+
+        # Particle with global thermostat params
+        p_global = system.part.add(pos=[0., 0., 0.])
+        system.part.add(pos=[0., 0., 0.], fix=[1, 1, 1])
+        # Make sure, mass doesn't change diff coeff
+        self.setup_diff_mass_rinertia(p_global)
+
+        # Enable the harmonic interaction
+        self.harmonic_set_pairs(2)
+
+        # Thermostat setup
+        if espressomd.has_features("ROTATION"):
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                # particle anisotropy and rotation
+                system.thermostat.set_brownian(
+                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_a, seed = 42)
+            else:
+                # Rotation without particle anisotropy
+                system.thermostat.set_brownian(
+                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_i, seed = 42)
+        else:
+            # No rotation
+            system.thermostat.set_brownian(kT=kT, gamma=gamma, seed = 42)
+
+        # system.cell_system.skin = 0.4
+        system.integrator.run(int(1E4))
+
+        # Correlators
+        pos_obs = {}
+        vel_obs = {}
+        omega_obs = {}
+        corr_pos = {}
+        corr_vel = {}
+        corr_omega = {}
+
+        # linear pos & vel
+        pos_obs = ParticlePositions(ids=system.part[:].id)
+        vel_obs = ParticleVelocities(ids=system.part[:].id)
+        corr_pos = Correlator(obs1=pos_obs, tau_lin=16, tau_max=20., delta_N=1,
+                              corr_operation="componentwise_product", compress1="discard1")
+        corr_vel = Correlator(obs1=vel_obs, tau_lin=16, tau_max=20., delta_N=1,
+                              corr_operation="componentwise_product", compress1="discard1")
+        system.auto_update_accumulators.add(corr_pos)
+        system.auto_update_accumulators.add(corr_vel)
+        # angular vel
+        if espressomd.has_features("ROTATION"):
+            omega_obs = ParticleBodyAngularVelocities(ids=system.part[:].id)
+            corr_omega = Correlator(
+                obs1=omega_obs, tau_lin=16, tau_max=20, delta_N=1,
+                                    corr_operation="componentwise_product", compress1="discard1")
+            system.auto_update_accumulators.add(corr_omega)
+
+        system.integrator.run(int(6.E6))
+
+        system.auto_update_accumulators.remove(corr_pos)
+        corr_pos.finalize()
+        system.auto_update_accumulators.remove(corr_vel)
+        corr_vel.finalize()
+        if espressomd.has_features("ROTATION"):
+            system.auto_update_accumulators.remove(corr_omega)
+            corr_omega.finalize()
+
+        # Verify diffusion
+        # Translation
+        # Cast gammas to vector, to make checks independent of
+        # PARTICLE_ANISOTROPY
+        gamma = np.ones(3) * gamma
+        self.verify_diffusion(p_global, corr_vel, kT, gamma, check = "BD")
+        self.verify_diffusion_pos(p_global, corr_pos, kT, gamma, check = "BD")
+
+        # Rotation
+        if espressomd.has_features("ROTATION"):
+            # Decide on effective gamma rotation, since for rotation it is
+            # direction dependent
+            eff_gamma_rot = None
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                eff_gamma_rot = gamma_rot_a
+            else:
+                eff_gamma_rot = gamma_rot_i * np.ones(3)
+
+            #not relevant
+            #self.verify_diffusion(p_global, corr_omega, kT, eff_gamma_rot)
+
+    def verify_diffusion(self, p, corr, kT, gamma, check):
         """Verifify diffusion coeff.
 
            p: particle, corr: dict containing correltor with particle as key,
@@ -297,9 +415,22 @@ class HarmonicOscillatorThermalization(ut.TestCase):
             self.assertAlmostEqual(ratio, 0., delta=0.07)
             ratio_average += ratio
         ratio_average /= 3.
+        self.state_print(check = '{0}: Green-Kubo-velocity'.format(check))
         print("\n Green-Kubo-velocity: time_step={0} ratio={1}".format(self.system.time_step, ratio_average))
 
-    def verify_diffusion_pos(self, p, corr, kT, gamma):
+        # validating the acf within the dimensionless model
+        k = p.mass
+        b = 1. / k
+        w0 = 1. / k**0.5
+        w1 = (w0*w0-b*b/4.+1E-13)**0.5
+
+        tmax = acf.shape[0]
+        for t in range(tmax):
+            tau = acf[t, 0]
+            acf_val = (1 / k) * np.exp(-b * tau / 2.) * (np.cos(w1 * tau) - (b / (2. * w1)) * np.sin(w1 * tau))
+            print("{0},{1},{2},{3},{4}".format(tau,acf[t, 1],acf[t, 2],acf[t, 3],acf_val))
+
+    def verify_diffusion_pos(self, p, corr, kT, gamma, check):
         c = corr
         i = p.id
         acf = c.result()[:, [0, 2 + 3 * i, 2 + 3 * i + 1, 2 + 3 * i + 2]]
@@ -313,7 +444,20 @@ class HarmonicOscillatorThermalization(ut.TestCase):
             self.assertAlmostEqual(ratio, 1., delta=0.07)
             ratio_average += ratio
         ratio_average /= 3.
+        self.state_print(check = '{0}: Green-Kubo-like-position'.format(check))
         print("\n Green-Kubo-like-position: time_step={0} ratio={1}".format(self.system.time_step, ratio_average))
+
+        # validating the acf within the dimensionless model
+        k = p.mass
+        b = 1. / k
+        w0 = 1. / k**0.5
+        w1 = (w0*w0-b*b/4.+1E-13)**0.5
+
+        tmax = acf.shape[0]
+        for t in range(tmax):
+            tau = acf[t, 0]
+            acf_val = np.exp(-b * tau / 2.) * (np.cos(w1 * tau) + (b / (2. * w1)) * np.sin(w1 * tau))
+            print("{0},{1},{2},{3},{4}".format(tau,acf[t, 1],acf[t, 2],acf[t, 3],acf_val))
 
 if __name__ == "__main__":
     ut.main()

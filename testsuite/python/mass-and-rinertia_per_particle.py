@@ -278,20 +278,26 @@ class ThermoTest(ut.TestCase):
 
         # NVT thermostat
         # Just some temperature range to cover by the test:
-        self.kT = uniform(1.5, 5.)
+        #self.kT = uniform(1.5, 5.)
+        self.kT = 1.0
         # See the above comment regarding the gamma assignments.
         # Note: here & hereinafter specific variations in these ranges are related to
         # the test execution duration to achieve the required statistical
         # averages faster.
-        gamma_min = self.gamma_min
-        gamma_max = self.gamma_max
-        self.gamma_global = uniform(gamma_min, gamma_max, 3)
-        self.gamma_global_rot = uniform(gamma_min, gamma_max, 3)
+        #gamma_min = self.gamma_min
+        #gamma_max = self.gamma_max
+        #self.gamma_global = uniform(gamma_min, gamma_max, 3)
+        self.gamma_global = np.ones((3))
+        #self.gamma_global_rot = uniform(gamma_min, gamma_max, 3)
+        self.gamma_global_rot = np.ones((3))
         # Per-particle parameters
-        self.kT_p = 2.5, 2.0
+        #self.kT_p = 2.5, 2.0
+        self.kT_p = 1.0, 1.0
         for k in range(2):
-            self.gamma_tran_p[k,:] = uniform(gamma_min, gamma_max, 3)
-            self.gamma_rot_p[k,:] = uniform(gamma_min, gamma_max, 3)
+            #self.gamma_tran_p[k,:] = uniform(gamma_min, gamma_max, 3)
+            #self.gamma_rot_p[k,:] = uniform(gamma_min, gamma_max, 3)
+            self.gamma_tran_p[k,:] = np.ones((3))
+            self.gamma_rot_p[k,:] = np.ones((3))
 
         # Particles
         # As far as the problem characteristic time is t0 ~ mass / gamma
@@ -301,10 +307,13 @@ class ThermoTest(ut.TestCase):
         # Also, it is expected to test the large enough mass (max_mass_param).
         # It should be not very large, otherwise the thermalization will require
         # too much of the CPU time.
-        min_mass_param = 3.
-        max_mass_param = 10.0
-        self.mass = uniform(min_mass_param, max_mass_param)
-        self.J = uniform(min_mass_param, max_mass_param, 3)
+        #min_mass_param = 3.
+        #max_mass_param = 10.0
+        #self.mass = uniform(min_mass_param, max_mass_param)
+        k_par = 0.25
+        self.mass = k_par
+        #self.J = uniform(min_mass_param, max_mass_param, 3)
+        self.J = np.array([k_par, k_par, k_par])
         for i in range(n):
             for k in range(2):
                 ind = i + k * n
@@ -528,7 +537,7 @@ class ThermoTest(ut.TestCase):
             kT_current_tran = 0.5 * self.mass * sum(dv2n[0,:]) / (n * 3.0 * self.halfkT_p_validate[0])
             kT_current_rot = 0.5 * sum(self.J[:] * do2n[0,:]) / (n * 3.0 * self.halfkT_p_validate[0])
             dr2_current = sum(dr2n[0,:]) / (sigma2_tr[0] * n)
-            print('\n{0},{1},{2},{3}'.format(dt, kT_current_tran, kT_current_rot, dr2_current))
+            print('{0},{1},{2},{3}'.format(dt, kT_current_tran, kT_current_rot, dr2_current))
 
         #tolerance = 0.15
         Ev = 0.5 * self.mass * v2 / (n * loops)
@@ -626,9 +635,10 @@ class ThermoTest(ut.TestCase):
         print('\n \n', check)
         #print('\n', system.thermostat.get_state())
         thermo_state = system.thermostat.get_state()
-        print('\n kT={0}, gamma={1}, type={2}'.format(thermo_state[0]["kT"], thermo_state[0]["gamma"], thermo_state[0]["type"]))
+        print('kT={0}, gamma={1}, type={2}'.format(thermo_state[0]["kT"], thermo_state[0]["gamma"], thermo_state[0]["type"]))
         part = system.part[0]
-        print('\n mass={0} rintertia={1}'.format(part.mass, part.rinertia))
+        print('mass={0} rintertia={1}'.format(part.mass, part.rinertia))
+        print('time_step={0}'.format(system.time_step))
 
     # Test case 0.0.0:
     # no particle specific values / dissipation only / LD only.
@@ -676,7 +686,7 @@ class ThermoTest(ut.TestCase):
         n = int(1E4)
         therm_steps = 2
         # Divided to a number of integration steps per loop
-        loops = int(5E3) / 50
+        loops = int(20E3) / 50
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
