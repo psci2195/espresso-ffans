@@ -220,10 +220,25 @@ struct ParticleProperties {
 struct ParticlePosition {
   /** periodically folded position. */
   Utils::Vector3d p = {0, 0, 0};
+#ifdef ERMAK_BUCKHOLZ
+  /** position at the beginning of the leap.
+   * It is needed for the correct velocity and position
+   * random walk correlation. Ref. eq. (8) of Ermak1980.
+  */
+  Utils::Vector3d p0 = {0., 0., 0.};
+#endif // ERMAK_BUCKHOLZ
 
 #ifdef ROTATION
   /** quaternions to define particle orientation */
   Utils::Vector4d quat = {1., 0., 0., 0.};
+#ifdef ERMAK_BUCKHOLZ
+  /** body frame rotations saved.
+   * It is needed for the correct velocity and position
+   * random walk correlation at the final velocity Verlet step.
+   * Ref. eq. (8) of Ermak1980.
+  */
+  Utils::Vector3d dphi = {0., 0., 0.};
+#endif // ERMAK_BUCKHOLZ
   /** unit director calculated from the quaternions */
   inline const Utils::Vector3d calc_director() const {
     return {2 * (quat[1] * quat[3] + quat[0] * quat[2]),

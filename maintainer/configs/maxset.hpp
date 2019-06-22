@@ -44,6 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ENGINE
 
 #define BROWNIAN_DYNAMICS
+#define ERMAK_BUCKHOLZ
 
 #ifdef CUDA
 #define LB_BOUNDARIES_GPU

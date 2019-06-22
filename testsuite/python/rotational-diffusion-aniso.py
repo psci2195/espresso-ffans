@@ -214,10 +214,10 @@ class RotDiffAniso(ut.TestCase):
 
             # Actual comparison.
 
-            tolerance = 0.2
+            tolerance = 0.24
             # Too small values of the direction cosines are out of interest
             # compare to 0..1 range.
-            min_value = 0.14
+            min_value = 0.18
 
             # Eq. (23) [Perrin1936].
             dcosjj_validate[0] = np.exp(-(D[1] + D[2]) * self.system.time)
@@ -378,6 +378,19 @@ class RotDiffAniso(ut.TestCase):
             self.set_isotropic_param()
             self.add_particles_setup(n)
             self.system.thermostat.set_brownian(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_rot_diffusion(n)
+
+    if "ERMAK_BUCKHOLZ" in espressomd.features():
+        # Ermak-Buckholz thermostat / Isotropic
+        def test_case_11(self):
+            n = 800
+            self.system.thermostat.turn_off()
+            self.rot_diffusion_param_setup()
+            self.set_isotropic_param()
+            self.add_particles_setup(n)
+            self.system.thermostat.set_eb(
                 kT=self.kT, gamma=self.gamma_global, seed=42)
             # Actual integration and validation run
             self.check_rot_diffusion(n)

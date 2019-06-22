@@ -103,7 +103,7 @@ void mpi_bcast_langevin_rng_counter(const uint64_t counter) {
 }
 
 void langevin_rng_counter_increment() {
-  if (thermo_switch & (THERMO_LANGEVIN | THERMO_BROWNIAN))
+  if (thermo_switch & (THERMO_LANGEVIN | THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ))
     langevin_rng_counter->increment();
 }
 
@@ -255,6 +255,14 @@ void thermo_init_brownian() {
 }
 #endif // BROWNIAN_DYNAMICS
 
+#ifdef ERMAK_BUCKHOLZ
+void thermo_init_ermak_buckholz() {
+  // the EB thermostat relies on the similar architecture
+  // as the BD one. Any futures improvements can be added on top here.
+  thermo_init_brownian();
+}
+#endif // ERMAK_BUCKHOLZ
+
 void thermo_init() {
 
   // Init thermalized bond despite of thermostat
@@ -278,6 +286,10 @@ void thermo_init() {
 #ifdef BROWNIAN_DYNAMICS
   if (thermo_switch & THERMO_BROWNIAN)
     thermo_init_brownian();
+#endif
+#ifdef ERMAK_BUCKHOLZ
+  if (thermo_switch & THERMO_ERMAK_BUCKHOLZ)
+    thermo_init_ermak_buckholz();
 #endif
 }
 

@@ -224,7 +224,7 @@ void propagate_omega_quat_particle(Particle *p) {
   if (!p->p.rotation)
     return;
 #ifdef BROWNIAN_DYNAMICS
-  if (thermo_switch & THERMO_BROWNIAN)
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ))
     return;
 #endif // BROWNIAN_DYNAMICS
 
@@ -341,6 +341,9 @@ void convert_torques_propagate_omega() {
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_drag_vel_rot(p, 0.5 * time_step);
       bd_random_walk_vel_rot(p, 0.5 * time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      bd_drag_vel_rot(p, time_step);
+      bd_random_walk_vel_rot(p, time_step);
     } else
 #endif // BROWNIAN_DYNAMICS
     {
@@ -487,7 +490,9 @@ void local_rotate_particle(Particle &p, const Utils::Vector3d &axis_space_frame,
 /** \name bd_drag_rot */
 /*********************************************************/
 /**(An analogy of eq. (14.39) T. Schlick,
- * https://doi.org/10.1007/978-1-4419-6351-2 (2010))
+ * https://doi.org/10.1007/978-1-4419-6351-2 (2010) for BD
+ * and eq. (8a) Ermak & Buckholz,
+ * https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
@@ -512,6 +517,22 @@ void bd_drag_rot(Particle &p, double dt) {
 #else
       dphi[j] = p.f.torque[j] * dt / (local_gamma[j]);
 #endif // ROTATIONAL_INERTIA
+      // the remaining deterministic terms of the eq. (8a), Ermak1980.
+      if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
+#ifndef PARTICLE_ANISOTROPY
+        double beta = local_gamma / p.p.rinertia[j];
+#else
+        double beta = local_gamma[j] / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
+        double tmp_exp = (1. - exp(-beta * dt)) / beta;
+        // velocity is taken from the previous step end.
+        dphi[j] += tmp_exp * ((p.m.omega[j]) - (p.f.torque[j] / (p.p.rinertia[j] * beta)));
+        // init dphi here.
+        // It is used further by the velocity leap (8b) of Ermak1980.
+        p.r.dphi[j] = dphi[j];
+        if (dphi[j] != dphi[j]) printf("\n ERROR bd_drag_rot dt=%e beta=%e, tmp_exp=%e, omega=%e, torque=%e, rinertia =%e",
+        dt, beta, tmp_exp, p.m.omega[j], p.f.torque[j], p.p.rinertia[j]);
+      }
     }
   } // j
   rotation_fix(p, dphi);
@@ -528,13 +549,14 @@ void bd_drag_rot(Particle &p, double dt) {
 /** \name bd_drag_vel_rot */
 /*********************************************************/
 /**(An analogy of the 1st term of the eq. (14.34) T. Schlick,
- * https://doi.org/10.1007/978-1-4419-6351-2 (2010))
+ * https://doi.org/10.1007/978-1-4419-6351-2 (2010) for BD
+ * and eq. (8b) Ermak & Buckholz,
+ * https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
 void bd_drag_vel_rot(Particle &p, double dt) {
   Thermostat::GammaType local_gamma;
-
   if (p.p.gamma_rot >= Thermostat::GammaType{}) {
     local_gamma = p.p.gamma_rot;
   } else {
@@ -548,14 +570,33 @@ void bd_drag_vel_rot(Particle &p, double dt) {
     } else
 #endif
     {
-      // only conservative part of the force is used here
-      // NOTE: velocity is assigned here and propagated by thermal part further
-      // on top of it
+      if (thermo_switch & THERMO_BROWNIAN) {
+        // only conservative part of the force is used here
+        // NOTE: velocity is assigned here and propagated by thermal part further
+        // on top of it
 #ifndef PARTICLE_ANISOTROPY
-      p.m.omega[j] = p.f.torque[j] / (local_gamma);
+        p.m.omega[j] = p.f.torque[j] / (local_gamma);
 #else
-      p.m.omega[j] = p.f.torque[j] / (local_gamma[j]);
+        p.m.omega[j] = p.f.torque[j] / (local_gamma[j]);
 #endif // ROTATIONAL_INERTIA
+      } else if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
+        // deterministic terms of the eq. (8b), Ermak1980
+#ifndef PARTICLE_ANISOTROPY
+        double beta = local_gamma / p.p.rinertia[j];
+#else
+        double beta = local_gamma[j] / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
+        double tmp_exp = (1. - exp(-beta * dt));
+        double tmp_exp2 = (1. - exp(-2. * beta * dt));
+        double C = 2 * beta * dt - 3. + 4. * exp(-beta * dt)
+                   - exp(-2. * beta * dt);
+        p.m.omega[j] = (p.m.omega[j] *
+                  (2 * beta * dt * exp(-beta * dt) - tmp_exp2)
+                  + beta * p.r.dphi[j] * pow(tmp_exp, 2)
+                  + (p.f.torque[j] / (p.p.rinertia[j] * beta)) *
+                  (beta * dt * tmp_exp2 - 2. * pow(tmp_exp, 2))) / C;
+        if (p.m.omega[j] != p.m.omega[j]) printf("\n ERROR bd_drag_vel_rot");
+      }
     }
   }
   rotation_fix(p, p.m.omega);
@@ -566,7 +607,9 @@ void bd_drag_vel_rot(Particle &p, double dt) {
 /** \name bd_random_walk_rot */
 /*********************************************************/
 /**(An analogy of eq. (14.37) T. Schlick,
- * https://doi.org/10.1007/978-1-4419-6351-2 (2010))
+ * https://doi.org/10.1007/978-1-4419-6351-2 (2010) for BD
+ * and eq. (8a) Ermak & Buckholz,
+ * https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
@@ -575,12 +618,13 @@ void bd_random_walk_rot(Particle &p, double dt) {
   extern Thermostat::GammaType brown_gammatype_nan;
   // first, set defaults
   Thermostat::GammaType brown_sigma_pos_temp_inv = brown_sigma_pos_rotation_inv;
-
+  Thermostat::GammaType local_gamma;
   // Override defaults if per-particle values for T and gamma are given
 #ifdef LANGEVIN_PER_PARTICLE
   auto const constexpr langevin_temp_coeff = 2.0;
 
   if (p.p.gamma_rot >= Thermostat::GammaType{}) {
+    local_gamma = p.p.gamma_rot;
     // Is a particle-specific temperature also specified?
     if (p.p.T >= 0.) {
       if (p.p.T > 0.0) {
@@ -600,6 +644,7 @@ void bd_random_walk_rot(Particle &p, double dt) {
     }
   } // particle specific gamma
   else {
+    local_gamma = langevin_gamma_rotation;
     // No particle-specific gamma, but is there particle-specific temperature
     if (p.p.T >= 0.) {
       if (p.p.T > 0.0) {
@@ -624,18 +669,44 @@ void bd_random_walk_rot(Particle &p, double dt) {
 #endif
     {
 #ifndef PARTICLE_ANISOTROPY
-      if (brown_sigma_pos_temp_inv > 0.0) {
-        dphi[j] = noise[j] * (1.0 / brown_sigma_pos_temp_inv) * sqrt(dt);
-      } else {
-        dphi[j] = 0.0;
+      if (thermo_switch & THERMO_BROWNIAN) {
+        if (brown_sigma_pos_temp_inv > 0.0) {
+          dphi[j] = noise[j] * (1.0 / brown_sigma_pos_temp_inv) * sqrt(dt);
+        } else {
+          dphi[j] = 0.0;
+        }
       }
+      double beta = local_gamma / p.p.rinertia[j];
+      double brown_sigma_pos_temp_inv_local = brown_sigma_pos_temp_inv;
 #else
-      if (brown_sigma_pos_temp_inv[j] > 0.0) {
-        dphi[j] = noise[j] * (1.0 / brown_sigma_pos_temp_inv[j]) * sqrt(dt);
-      } else {
-        dphi[j] = 0.0;
+      if (thermo_switch & THERMO_BROWNIAN) {
+        if (brown_sigma_pos_temp_inv[j] > 0.0) {
+          dphi[j] = noise[j] * (1.0 / brown_sigma_pos_temp_inv[j]) * sqrt(dt);
+        } else {
+          dphi[j] = 0.0;
+        }
       }
+      double beta = local_gamma[j] / p.p.rinertia[j];
+      double brown_sigma_pos_temp_inv_local = brown_sigma_pos_temp_inv[j];
 #endif // ROTATIONAL_INERTIA
+      // the random terms of the (8a), Ermak1980.
+      if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
+        if (dphi[j] != dphi[j]) printf("\n ERROR bd_random_walk_rot initial");
+        // velocity is taken from the previous step end.
+        if (brown_sigma_pos_temp_inv_local > 0.0) {
+          dphi[j] = noise[j] * sqrt(dt + (1. / (2. * beta)) * (-3. +
+            4. * exp(-beta * dt) - exp(-2. * beta * dt)))
+            / brown_sigma_pos_temp_inv_local;
+        } else {
+          dphi[j] = 0.0;
+        }
+        // increment dphi here.
+        // It is used further by the velocity leap (8b) of Ermak1980.
+        p.r.dphi[j] += dphi[j];
+        if (dphi[j] != dphi[j]) printf("\n ERROR bd_random_walk_rot dt=%e beta=%e, brown_sigma_pos_temp_inv_local=%e, noise[j]=%e, root arg=%e",
+        dt, beta, brown_sigma_pos_temp_inv_local, noise[j], (1. / beta) * (-3. +
+            4. * exp(-beta * dt) - exp(-2. * beta * dt)));
+      }
     }
   }
   rotation_fix(p, dphi);
@@ -653,7 +724,9 @@ void bd_random_walk_rot(Particle &p, double dt) {
 /** \name bd_random_walk_vel_rot */
 /*********************************************************/
 /**(An analogy of eq. (10.2.16) N. Pottier,
- * https://doi.org/10.1007/s10955-010-0114-6 (2010))
+ * https://doi.org/10.1007/s10955-010-0114-6 (2010) for BD
+ * and eq. (8b) Ermak & Buckholz,
+ * https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
@@ -661,6 +734,13 @@ void bd_random_walk_vel_rot(Particle &p, double dt) {
   extern double brown_sigma_vel_rotation;
   // first, set defaults
   double brown_sigma_vel_temp = brown_sigma_vel_rotation;
+
+  Thermostat::GammaType local_gamma;
+  if (p.p.gamma_rot >= Thermostat::GammaType{}) {
+    local_gamma = p.p.gamma_rot;
+  } else {
+    local_gamma = langevin_gamma_rotation;
+  }
 
   // Override defaults if per-particle values for T and gamma are given
 #ifdef LANGEVIN_PER_PARTICLE
@@ -673,16 +753,33 @@ void bd_random_walk_vel_rot(Particle &p, double dt) {
   }
 #endif /* LANGEVIN_PER_PARTICLE */
 
-  Utils::Vector3d domega;
+  Utils::Vector3d domega = {0.0, 0.0, 0.0};
   Utils::Vector3d noise = v_noise_g(p.p.identity, RNGSalt::BROWNIAN);
   for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
     if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
     {
-      // velocity is added here. It is already initialized in the terminal drag
-      // part.
-      domega[j] = brown_sigma_vel_temp * noise[j] / sqrt(p.p.rinertia[j]);
+      if (thermo_switch & THERMO_BROWNIAN) {
+        // velocity is added here. It is already initialized in the terminal drag
+        // part.
+        domega[j] = brown_sigma_vel_temp * noise[j] / sqrt(p.p.rinertia[j]);
+      } else if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
+        // the random terms of the (8b), Ermak1980.
+#ifndef PARTICLE_ANISOTROPY
+        double beta = local_gamma / p.p.rinertia[j];
+#else
+        double beta = local_gamma[j] / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
+        double tmp_exp = (1. - exp(-beta * dt));
+        double tmp_exp2 = (1. - exp(-2. * beta * dt));
+        double C = 2 * beta * dt - 3. + 4. * exp(-beta * dt)
+                   - exp(-2. * beta * dt);
+        domega[j] = brown_sigma_vel_temp * sqrt((2. / (p.p.rinertia[j] * C)) *
+                    (beta * dt * tmp_exp2 - 2. * pow(tmp_exp, 2))) *
+                    noise[j];
+        if (domega[j] != domega[j]) printf("\n ERROR bd_random_walk_vel_rot");
+      }
     }
   }
   rotation_fix(p, domega);

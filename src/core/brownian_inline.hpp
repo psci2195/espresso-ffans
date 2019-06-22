@@ -30,7 +30,8 @@
 /*********************************************************/
 /** \name bd_drag */
 /*********************************************************/
-/**(Eq. (14.39) T. Schlick, https://doi.org/10.1007/978-1-4419-6351-2 (2010))
+/**(Eq. (14.39) T. Schlick, https://doi.org/10.1007/978-1-4419-6351-2 (2010) for BD
+ * and eq. (8a) Ermak & Buckholz, https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
@@ -49,13 +50,34 @@ inline void bd_drag(Particle &p, double dt) {
     if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
     {
+#ifdef ERMAK_BUCKHOLZ
+      if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+        // init p0 here.
+        // It is used further by the velocity leap (8b) of Ermak1980.
+        p.r.p0[j] = p.r.p[j];
+      }
+#endif // ERMAK_BUCKHOLZ
+      // for BD:
       // Second (deterministic) term of the Eq. (14.39) of Schlick2010.
       // Only a conservative part of the force is used here
+      // for EB:
+      // same terms belong to the eq. (8a), Ermak1980
 #ifndef PARTICLE_ANISOTROPY
       p.r.p[j] += p.f.f[j] * dt / (local_gamma);
 #else
       p.r.p[j] += p.f.f[j] * dt / (local_gamma[j]);
 #endif // PARTICLE_ANISOTROPY
+      // the remaining deterministic terms of the eq. (8a), Ermak1980.
+      if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+#ifndef PARTICLE_ANISOTROPY
+        double beta = local_gamma / p.p.mass;
+#else
+        double beta = local_gamma[j] / p.p.mass;
+#endif // PARTICLE_ANISOTROPY
+        double tmp_exp = (1. - exp(-beta * dt)) / beta;
+        // velocity is taken from the previous step end.
+        p.r.p[j] += tmp_exp * ((p.m.v[j]) - (p.f.f[j] / (p.p.mass * beta)));
+      }
     }
   }
 }
@@ -64,7 +86,8 @@ inline void bd_drag(Particle &p, double dt) {
 /*********************************************************/
 /** \name bd_drag_vel */
 /*********************************************************/
-/**(Eq. (14.34) T. Schlick, https://doi.org/10.1007/978-1-4419-6351-2 (2010))
+/**(Eq. (14.34) T. Schlick, https://doi.org/10.1007/978-1-4419-6351-2 (2010) for BD
+ * and eq. (8b) Ermak & Buckholz, https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
@@ -85,15 +108,33 @@ inline void bd_drag_vel(Particle &p, double dt) {
     } else
 #endif
     {
-      // First (deterministic) term of the eq. (14.34) of Schlick2010 taking
-      // into account eq. (14.35). Only conservative part of the force is used
-      // here NOTE: velocity is assigned here and propagated by thermal part
-      // further on top of it
+      if (thermo_switch & THERMO_BROWNIAN) {
+        // First (deterministic) term of the eq. (14.34) of Schlick2010 taking
+        // into account eq. (14.35). Only conservative part of the force is used
+        // here NOTE: velocity is assigned here and propagated by thermal part
+        // further on top of it
 #ifndef PARTICLE_ANISOTROPY
-      p.m.v[j] = p.f.f[j] / (local_gamma);
+        p.m.v[j] = p.f.f[j] / (local_gamma);
 #else
-      p.m.v[j] = p.f.f[j] / (local_gamma[j]);
+        p.m.v[j] = p.f.f[j] / (local_gamma[j]);
 #endif // PARTICLE_ANISOTROPY
+      } else if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
+        // deterministic terms of the eq. (8b), Ermak1980
+#ifndef PARTICLE_ANISOTROPY
+        double beta = local_gamma / p.p.mass;
+#else
+        double beta = local_gamma[j] / p.p.mass;
+#endif // PARTICLE_ANISOTROPY
+        double tmp_exp = (1. - exp(-beta * dt));
+        double tmp_exp2 = (1. - exp(-2. * beta * dt));
+        double C = 2 * beta * dt - 3. + 4. * exp(-beta * dt)
+                   - exp(-2. * beta * dt);
+        p.m.v[j] = (p.m.v[j] *
+                  (2 * beta * dt * exp(-beta * dt) - tmp_exp2)
+                  + beta * (p.r.p[j] - p.r.p0[j]) * pow(tmp_exp, 2)
+                  + (p.f.f[j] / (p.p.mass * beta)) *
+                  (beta * dt * tmp_exp2 - 2. * pow(tmp_exp, 2))) / C;
+      } // else dt==0: is not needed, the original velocity is kept
     }
   }
 }
@@ -102,7 +143,9 @@ inline void bd_drag_vel(Particle &p, double dt) {
 /*********************************************************/
 /** \name bd_random_walk_vel */
 /*********************************************************/
-/**(Eq. (10.2.16) N. Pottier, https://doi.org/10.1007/s10955-010-0114-6 (2010))
+/**(Eq. (10.2.16) N. Pottier, https://doi.org/10.1007/s10955-010-0114-6 (2010) for BD
+ * and eq. (8b) Ermak & Buckholz,
+ * https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
@@ -116,6 +159,14 @@ inline void bd_random_walk_vel(Particle &p, double dt) {
   extern double brown_sigma_vel;
   // first, set defaults
   double brown_sigma_vel_temp;
+  // The friction tensor Z from the eq. (14.31) of Schlick2010:
+  Thermostat::GammaType local_gamma;
+
+  if (p.p.gamma >= Thermostat::GammaType{}) {
+    local_gamma = p.p.gamma;
+  } else {
+    local_gamma = langevin_gamma;
+  }
 
   // Override defaults if per-particle values for T and gamma are given
 #ifdef LANGEVIN_PER_PARTICLE
@@ -134,15 +185,31 @@ inline void bd_random_walk_vel(Particle &p, double dt) {
     if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
     {
-      // Random (heat) velocity is added here. It is already initialized in the
-      // terminal drag part. See eq. (10.2.16) taking into account eq. (10.2.18)
-      // and (10.2.29), Pottier2010. Note, that the Pottier2010 units system
-      // (see Eq. (10.1.1) there) has been adapted towards the ESPResSo and the
-      // referenced above Schlick2010 one, which is defined by the eq. (14.31)
-      // of Schlick2010. A difference is the mass factor to the friction tensor.
-      // The noise is Gaussian according to the convention at p. 237 (last
-      // paragraph), Pottier2010.
-      p.m.v[j] += brown_sigma_vel_temp * noise[j] / sqrt(p.p.mass);
+      if (thermo_switch & THERMO_BROWNIAN) {
+        // Random (heat) velocity is added here. It is already initialized in the
+        // terminal drag part. See eq. (10.2.16) taking into account eq. (10.2.18)
+        // and (10.2.29), Pottier2010. Note, that the Pottier2010 units system
+        // (see Eq. (10.1.1) there) has been adapted towards the ESPResSo and the
+        // referenced above Schlick2010 one, which is defined by the eq. (14.31)
+        // of Schlick2010. A difference is the mass factor to the friction tensor.
+        // The noise is Gaussian according to the convention at p. 237 (last
+        // paragraph), Pottier2010.
+        p.m.v[j] += brown_sigma_vel_temp * noise[j] / sqrt(p.p.mass);
+      } else if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
+        // the random terms of the (8b), Ermak1980.
+#ifndef PARTICLE_ANISOTROPY
+        double beta = local_gamma / p.p.mass;
+#else
+        double beta = local_gamma[j] / p.p.mass;
+#endif // PARTICLE_ANISOTROPY
+        double tmp_exp = (1. - exp(-beta * dt));
+        double tmp_exp2 = (1. - exp(-2. * beta * dt));
+        double C = 2 * beta * dt - 3. + 4. * exp(-beta * dt)
+                   - exp(-2. * beta * dt);
+        p.m.v[j] += brown_sigma_vel_temp * sqrt((2. / (p.p.mass * C)) *
+                    (beta * dt * tmp_exp2 - 2. * pow(tmp_exp, 2))) *
+                    noise[j];
+      }
     }
   }
 }

@@ -469,6 +469,9 @@ void propagate_vel_finalize_p_inst() {
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_drag_vel(p, 0.5 * time_step);
       bd_random_walk_vel(p, 0.5 * time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      bd_drag_vel(p, time_step);
+      bd_random_walk_vel(p, time_step);
     }
 #endif // BROWNIAN_DYNAMICS
     for (int j = 0; j < 3; j++) {
@@ -485,7 +488,7 @@ void propagate_vel_finalize_p_inst() {
 #endif
         {
 #ifdef BROWNIAN_DYNAMICS
-          if (!(thermo_switch & THERMO_BROWNIAN))
+          if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
 #endif // BROWNIAN_DYNAMICS
           {
             /* Propagate velocity: v(t+dt) = v(t+0.5*dt) + 0.5*dt * a(t+dt) */
@@ -633,7 +636,14 @@ void propagate_vel() {
 #ifdef ROTATION
     propagate_omega_quat_particle(&p);
 #ifdef BROWNIAN_DYNAMICS
-    bd_vel_steps_rot(p, 0.5 * time_step);
+    if (thermo_switch & THERMO_BROWNIAN) {
+      bd_vel_steps_rot(p, 0.5 * time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      // In contrast to the BD, the previous step velocity is kept!
+      // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
+      // means no changes in the original velocity.
+      bd_vel_steps_rot(p, 0.0);
+    }
 #endif // BROWNIAN_DYNAMICS
 #endif
 
@@ -643,7 +653,14 @@ void propagate_vel() {
       continue;
 #endif
 #ifdef BROWNIAN_DYNAMICS
-    bd_vel_steps_tran(p, 0.5 * time_step);
+    if (thermo_switch & THERMO_BROWNIAN) {
+      bd_vel_steps_tran(p, 0.5 * time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      // In contrast to the BD, the previous step velocity is kept!
+      // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
+      // means no changes in the original velocity.
+      bd_vel_steps_tran(p, 0.0);
+    }
 #endif // BROWNIAN_DYNAMICS
     for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
@@ -659,7 +676,7 @@ void propagate_vel() {
         } else
 #endif
 #ifdef BROWNIAN_DYNAMICS
-            if (!(thermo_switch & THERMO_BROWNIAN))
+            if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * a(t) */
@@ -704,7 +721,7 @@ void propagate_pos() {
 #endif
         {
 #ifdef BROWNIAN_DYNAMICS
-          if (!(thermo_switch & THERMO_BROWNIAN))
+          if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
 #endif // BROWNIAN_DYNAMICS
           {
             /* Propagate positions (only NVT): p(t + dt)   = p(t) + dt *
@@ -732,7 +749,14 @@ void propagate_vel_pos() {
 #ifdef ROTATION
     propagate_omega_quat_particle(&p);
 #ifdef BROWNIAN_DYNAMICS
-    bd_vel_steps_rot(p, 0.5 * time_step);
+    if (thermo_switch & THERMO_BROWNIAN) {
+      bd_vel_steps_rot(p, 0.5 * time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      // In contrast to the BD, the previous step velocity is kept!
+      // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
+      // means no changes in the original velocity.
+      bd_vel_steps_rot(p, 0.0);
+    }
     bd_pos_steps_rot(p, time_step);
 #endif // BROWNIAN_DYNAMICS
 #endif
@@ -743,7 +767,14 @@ void propagate_vel_pos() {
       continue;
 #endif
 #ifdef BROWNIAN_DYNAMICS
-    bd_vel_steps_tran(p, 0.5 * time_step);
+    if (thermo_switch & THERMO_BROWNIAN) {
+      bd_vel_steps_tran(p, 0.5 * time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      // In contrast to the BD, the previous step velocity is kept!
+      // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
+      // means no changes in the original velocity.
+      bd_vel_steps_tran(p, 0.0);
+    }
     bd_pos_steps_tran(p, time_step);
 #endif // BROWNIAN_DYNAMICS
     for (int j = 0; j < 3; j++) {
@@ -752,7 +783,7 @@ void propagate_vel_pos() {
 #endif
       {
 #ifdef BROWNIAN_DYNAMICS
-        if (!(thermo_switch & THERMO_BROWNIAN))
+        if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
@@ -961,7 +992,7 @@ int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
  * @param dt              Time interval (Input)
  */
 void bd_vel_steps_tran(Particle &p, double dt) {
-  if (thermo_switch & THERMO_BROWNIAN) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
     bd_drag_vel(p, dt);
     bd_random_walk_vel(p, dt);
   }
@@ -975,7 +1006,7 @@ void bd_vel_steps_tran(Particle &p, double dt) {
  * @param dt              Time interval (Input)
  */
 void bd_vel_steps_rot(Particle &p, double dt) {
-  if (thermo_switch & THERMO_BROWNIAN) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
     bd_drag_vel_rot(p, dt);
     bd_random_walk_vel_rot(p, dt);
   }
@@ -989,7 +1020,7 @@ void bd_vel_steps_rot(Particle &p, double dt) {
  * @param dt              Time interval (Input)
  */
 void bd_pos_steps_tran(Particle &p, double dt) {
-  if (thermo_switch & THERMO_BROWNIAN) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
     bd_drag(p, dt);
     bd_random_walk(p, dt);
   }
@@ -1003,7 +1034,7 @@ void bd_pos_steps_tran(Particle &p, double dt) {
  * @param dt              Time interval (Input)
  */
 void bd_pos_steps_rot(Particle &p, double dt) {
-  if (thermo_switch & THERMO_BROWNIAN) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
     bd_drag_rot(p, dt);
     bd_random_walk_rot(p, dt);
   }
@@ -1012,7 +1043,9 @@ void bd_pos_steps_rot(Particle &p, double dt) {
 /*********************************************************/
 /** \name bd_drag_vel */
 /*********************************************************/
-/**(Eq. (14.37) T. Schlick, https://doi.org/10.1007/978-1-4419-6351-2 (2010))
+/**(Eq. (14.37) T. Schlick, https://doi.org/10.1007/978-1-4419-6351-2 (2010) for BD
+ * and eq. (8a) Ermak & Buckholz,
+ * https://doi.org/10.1016/0021-9991(80)90084-4 (1980) for EB)
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
@@ -1030,12 +1063,15 @@ void bd_random_walk(Particle &p, double dt) {
   extern Thermostat::GammaType brown_gammatype_nan;
   // first, set defaults
   Thermostat::GammaType brown_sigma_pos_temp_inv = brown_sigma_pos_inv;
+  // The friction tensor Z from the eq. (14.31) of Schlick2010:
+  Thermostat::GammaType local_gamma = langevin_gamma;
 
   // Override defaults if per-particle values for T and gamma are given
 #ifdef LANGEVIN_PER_PARTICLE
   auto const constexpr langevin_temp_coeff = 2.0;
 
   if (p.p.gamma >= Thermostat::GammaType{}) {
+    local_gamma = p.p.gamma;
     // Is a particle-specific temperature also specified?
     if (p.p.T >= 0.) {
       if (p.p.T > 0.0) {
@@ -1080,7 +1116,7 @@ void bd_random_walk(Particle &p, double dt) {
 #endif
 
 #ifdef PARTICLE_ANISOTROPY
-  Utils::Vector3d delta_pos_body, delta_pos_lab;
+  Utils::Vector3d delta_pos_body = {0.0, 0.0, 0.0}, delta_pos_lab = {0.0, 0.0, 0.0};
 #endif
 
   // Eq. (14.37) is factored by the Gaussian noise (12.22) with its squared
@@ -1092,21 +1128,42 @@ void bd_random_walk(Particle &p, double dt) {
 #endif
     {
 #ifndef PARTICLE_ANISOTROPY
-      if (brown_sigma_pos_temp_inv > 0.0) {
-        delta_pos_body[j] =
-            (1.0 / brown_sigma_pos_temp_inv) * sqrt(dt) * noise[j];
-      } else {
-        delta_pos_body[j] = 0.0;
+      if (thermo_switch & THERMO_BROWNIAN) {
+        if (brown_sigma_pos_temp_inv > 0.0) {
+          delta_pos_body[j] =
+              (1.0 / brown_sigma_pos_temp_inv) * sqrt(dt);
+        } else {
+          delta_pos_body[j] = 0.0;
+        }
       }
+      double beta = local_gamma / p.p.mass;
+      double brown_sigma_pos_temp_inv_local = brown_sigma_pos_temp_inv;
 #else
-      if (brown_sigma_pos_temp_inv[j] > 0.0) {
-        delta_pos_body[j] =
-            (1.0 / brown_sigma_pos_temp_inv[j]) * sqrt(dt) * noise[j];
-      } else {
-        delta_pos_body[j] = 0.0;
+      if (thermo_switch & THERMO_BROWNIAN) {
+        if (brown_sigma_pos_temp_inv[j] > 0.0) {
+          delta_pos_body[j] =
+              (1.0 / brown_sigma_pos_temp_inv[j]) * sqrt(dt);
+        } else {
+          delta_pos_body[j] = 0.0;
+        }
       }
+      double beta = local_gamma[j] / p.p.mass;
+      double brown_sigma_pos_temp_inv_local = brown_sigma_pos_temp_inv[j];
 #endif // PARTICLE_ANISOTROPY
+      // the random terms of the (8a), Ermak1980.
+      if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+        // velocity is taken from the previous step end.
+        if (brown_sigma_pos_temp_inv_local > 0.0) {
+          delta_pos_body[j] = sqrt(dt + (1. / (2. * beta)) * (-3. +
+            4. * exp(-beta * dt) - exp(-2. * beta * dt)))
+            / brown_sigma_pos_temp_inv_local;
+        } else {
+          delta_pos_body[j] = 0.;
+        }
+      }
     }
+    // actual noise for both BD and EB thermostats..
+    delta_pos_body[j] *= noise[j];
   }
 
   if (aniso_flag) {

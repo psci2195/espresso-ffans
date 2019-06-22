@@ -39,6 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LB_ELECTROHYDRODYNAMICS
 
 #define BROWNIAN_DYNAMICS
+#define ERMAK_BUCKHOLZ
 
 #ifdef CUDA
 #define LB_BOUNDARIES_GPU
