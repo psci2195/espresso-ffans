@@ -657,18 +657,18 @@ class LangevinThermostat(ut.TestCase):
 
         # linear vel
         vel_obs = ParticleVelocities(ids=system.part[:].id)
-        corr_vel = Correlator(obs1=vel_obs, tau_lin=10, tau_max=1.4, delta_N=2,
+        corr_vel = Correlator(obs1=vel_obs, tau_lin=16, tau_max=20, delta_N=1,
                               corr_operation="componentwise_product", compress1="discard1")
         system.auto_update_accumulators.add(corr_vel)
         # angular vel
         if espressomd.has_features("ROTATION"):
             omega_obs = ParticleBodyAngularVelocities(ids=system.part[:].id)
             corr_omega = Correlator(
-                obs1=omega_obs, tau_lin=10, tau_max=1.5, delta_N=2,
+                obs1=omega_obs, tau_lin=16, tau_max=20, delta_N=1,
                                     corr_operation="componentwise_product", compress1="discard1")
             system.auto_update_accumulators.add(corr_omega)
 
-        system.integrator.run(int(8E4))
+        system.integrator.run(int(5E6))
 
         system.auto_update_accumulators.remove(corr_vel)
         corr_vel.finalize()
@@ -729,7 +729,7 @@ class LangevinThermostat(ut.TestCase):
         for coord in 1, 2, 3:
             I = np.trapz(acf[:, coord], acf[:, 0])
             ratio = I / (kT / gamma[coord - 1])
-            self.assertAlmostEqual(ratio, 1., delta=0.20)
+            self.assertAlmostEqual(ratio, 1., delta=0.1)
 
     @ut.skipIf(not espressomd.has_features("VIRTUAL_SITES"), "Skipped for lack of VIRTUAL_SITES")
     def test_07__virtual(self):
