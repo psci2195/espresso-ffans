@@ -572,6 +572,9 @@ class LangevinThermostat(ut.TestCase):
         system.part.clear()
 
         kT = 1.37
+        # long duration test option:
+        # dt = 0.01
+        # regular CI test:
         dt = 0.1
         system.time_step = dt
 
@@ -668,6 +671,9 @@ class LangevinThermostat(ut.TestCase):
                                     corr_operation="componentwise_product", compress1="discard1")
             system.auto_update_accumulators.add(corr_omega)
 
+        # long duration test option:
+        # system.integrator.run(int(70E6))
+        # regular CI test:
         system.integrator.run(int(5E6))
 
         system.auto_update_accumulators.remove(corr_vel)
