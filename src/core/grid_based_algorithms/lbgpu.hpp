@@ -22,12 +22,12 @@
  *  Implementation in lbgpu.cpp.
  */
 
-#ifndef LB_GPU_H
-#define LB_GPU_H
+#ifndef LBGPU_HPP
+#define LBGPU_HPP
 
 #include "config.hpp"
 
-#ifdef LB_GPU
+#ifdef CUDA
 #include <boost/optional.hpp>
 
 #include <utils/Counter.hpp>
@@ -160,7 +160,7 @@ typedef struct {
 
 /** Switch indicating momentum exchange between particles and fluid */
 extern LB_parameters_gpu lbpar_gpu;
-extern LB_rho_v_pi_gpu *host_values;
+extern std::vector<LB_rho_v_pi_gpu> host_values;
 extern LB_particle_allocation_state lb_reinit_particles_gpu;
 #ifdef ELECTROKINETICS
 extern LB_node_force_density_gpu node_f;
@@ -238,12 +238,6 @@ void lb_gpu_get_boundary_forces(double *forces);
 void lb_save_checkpoint_GPU(float *host_checkpoint_vd);
 void lb_load_checkpoint_GPU(float const *host_checkpoint_vd);
 
-void lb_lbfluid_remove_total_momentum();
-void lb_lbfluid_fluid_add_momentum(float momentum[3]);
-void lb_lbfluid_calc_linear_momentum(float momentum[3], int include_particles,
-                                     int include_lbfluid);
-void lb_lbfluid_particles_add_momentum(float const velocity[3]);
-
 void lb_lbfluid_set_population(const Utils::Vector3i &, float[LBQ]);
 void lb_lbfluid_get_population(const Utils::Vector3i &, float[LBQ]);
 
@@ -262,6 +256,6 @@ void lb_coupling_set_rng_state_gpu(uint64_t counter);
 /*@}*/
 extern boost::optional<Utils::Counter<uint64_t>> rng_counter_fluid_gpu;
 extern boost::optional<Utils::Counter<uint64_t>> rng_counter_coupling_gpu;
-#endif /* LB_GPU */
+#endif /*  CUDA */
 
-#endif /* LB_GPU_H */
+#endif /*  CUDA_H */

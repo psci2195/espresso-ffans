@@ -22,12 +22,12 @@
 #include "grid_based_algorithms/lb_interpolation.hpp"
 #include <boost/range/algorithm/transform.hpp>
 #include <utils/Histogram.hpp>
-#include <utils/coordinate_transformation.hpp>
+#include <utils/math/coordinate_transformation.hpp>
 
 namespace Observables {
 
-std::vector<double> CylindricalLBVelocityProfileAtParticlePositions::
-operator()(PartCfg &partCfg) const {
+std::vector<double> CylindricalLBVelocityProfileAtParticlePositions::evaluate(
+    PartCfg &partCfg) const {
   std::array<size_t, 3> n_bins{{static_cast<size_t>(n_r_bins),
                                 static_cast<size_t>(n_phi_bins),
                                 static_cast<size_t>(n_z_bins)}};
@@ -38,8 +38,9 @@ operator()(PartCfg &partCfg) const {
   // First collect all positions (since we want to call the LB function to
   // get the fluid velocities only once).
   std::vector<Utils::Vector3d> folded_positions(ids().size());
-  boost::transform(ids(), folded_positions.begin(),
-                   [&partCfg](int id) { return folded_position(partCfg[id]); });
+  boost::transform(ids(), folded_positions.begin(), [&partCfg](int id) {
+    return folded_position(partCfg[id].r.p, box_geo);
+  });
 
   std::vector<Utils::Vector3d> velocities(ids().size());
   boost::transform(
@@ -50,9 +51,9 @@ operator()(PartCfg &partCfg) const {
   for (auto &p : folded_positions)
     p -= center;
   for (int ind = 0; ind < ids().size(); ++ind) {
-    histogram.update(Utils::transform_pos_to_cylinder_coordinates(
+    histogram.update(Utils::transform_coordinate_cartesian_to_cylinder(
                          folded_positions[ind], axis),
-                     Utils::transform_vel_to_cylinder_coordinates(
+                     Utils::transform_vector_cartesian_to_cylinder(
                          velocities[ind], axis, folded_positions[ind]));
   }
   auto hist_tmp = histogram.get_histogram();

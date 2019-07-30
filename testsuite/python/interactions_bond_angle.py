@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import print_function
 import espressomd
 import numpy as np
 import unittest as ut
+import unittest_decorators as utx
 
 
 class InteractionsAngleBondTest(ut.TestCase):
@@ -191,8 +191,6 @@ class InteractionsAngleBondTest(ut.TestCase):
                       phi=phi, bend=acs_bend, phi0=acs_phi0),
                       acs_phi0)
 
-    @ut.skipIf(not espressomd.has_features("TABULATED"),
-               "Skipped because feature is disabled")
     def test_angle_tabulated(self):
         """Check that we can reproduce the three other potentials."""
         at_bend = 1
@@ -214,5 +212,4 @@ class InteractionsAngleBondTest(ut.TestCase):
                           at_phi0)
 
 if __name__ == '__main__':
-    print("Features: ", espressomd.features())
     ut.main()

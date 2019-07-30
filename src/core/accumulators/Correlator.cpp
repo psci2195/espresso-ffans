@@ -18,8 +18,6 @@
 */
 #include "Correlator.hpp"
 #include "integrate.hpp"
-#include "partCfg_global.hpp"
-#include "particle_data.hpp"
 
 #include <utils/serialization/multi_array.hpp>
 
@@ -300,8 +298,6 @@ void Correlator::initialize() {
     m_correlation_args[0] = m_correlation_args[0] * m_correlation_args[0];
     m_correlation_args[1] = m_correlation_args[1] * m_correlation_args[1];
     m_correlation_args[2] = m_correlation_args[2] * m_correlation_args[2];
-    fprintf(stderr, "args2: %f %f %f\n", m_correlation_args[0],
-            m_correlation_args[1], m_correlation_args[2]);
     if (dim_A % 3)
       throw std::runtime_error(init_errors[18]);
     m_dim_corr = dim_A / 3;
@@ -378,8 +374,8 @@ void Correlator::initialize() {
 
 void Correlator::update() {
   if (finalized) {
-    runtimeErrorMsg() << "No data can be added after finalize() was called.";
-    return;
+    throw std::runtime_error(
+        "No data can be added after finalize() was called.");
   }
   // We must now go through the hierarchy and make sure there is space for the
   // new
@@ -427,9 +423,9 @@ void Correlator::update() {
   newest[0] = (newest[0] + 1) % (m_tau_lin + 1);
   n_vals[0]++;
 
-  A[0][newest[0]] = A_obs->operator()(partCfg());
+  A[0][newest[0]] = A_obs->operator()();
   if (A_obs != B_obs) {
-    B[0][newest[0]] = B_obs->operator()(partCfg());
+    B[0][newest[0]] = B_obs->operator()();
   } else {
     B[0][newest[0]] = A[0][newest[0]];
   }
@@ -481,8 +477,7 @@ void Correlator::update() {
 
 int Correlator::finalize() {
   if (finalized) {
-    runtimeErrorMsg() << "Correlator::finalize() can only be called once.";
-    return 0;
+    throw std::runtime_error("Correlator::finalize() can only be called once.");
   }
   // We must now go through the hierarchy and make sure there is space for the
   // new

@@ -18,9 +18,8 @@
 #
 # Handling of interactions
 
-from __future__ import print_function, absolute_import
-
 from libcpp.string cimport string
+from libc cimport stdint
 
 include "myconfig.pxi"
 from espressomd.system cimport *
@@ -37,6 +36,13 @@ cdef extern from "TabulatedPotential.hpp":
         double minval
         vector[double] energy_tab
         vector[double] force_tab
+
+cdef extern from "dpd.hpp":
+    cdef struct DPDParameters:
+        double gamma
+        double cutoff
+        int wf
+        double pref
 
 cdef extern from "nonbonded_interactions/nonbonded_interaction_data.hpp":
     cdef struct IA_parameters:
@@ -134,16 +140,8 @@ cdef extern from "nonbonded_interactions/nonbonded_interaction_data.hpp":
         double Gaussian_sig
         double Gaussian_cut
 
-        int dpd_wf
-        int dpd_twf
-        double dpd_gamma
-        double dpd_r_cut
-        double dpd_pref1
-        double dpd_pref2
-        double dpd_tgamma
-        double dpd_tr_cut
-        double dpd_pref3
-        double dpd_pref4
+        DPDParameters dpd_radial
+        DPDParameters dpd_trans
 
         double HAT_Fmax
         double HAT_r
@@ -294,13 +292,8 @@ ELSE:
         double r
         double r_cut
 
-IF TABULATED:
-    cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
+cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
     #* Parameters for n-body tabulated potential (n=2,3,4). */
-        cdef struct Tabulated_bond_parameters:
-            int type
-            TabulatedPotential * pot
-ELSE:
     cdef struct Tabulated_bond_parameters:
         int type
         TabulatedPotential * pot
@@ -543,12 +536,12 @@ IF ROTATION:
     cdef extern from "bonded_interactions/harmonic_dumbbell.hpp":
         int harmonic_dumbbell_set_params(int bond_type, double k1, double k2, double r, double r_cut)
 
-IF TABULATED:
-    cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
-        cdef enum TabulatedBondedInteraction:
-            TAB_UNKNOWN = 0, TAB_BOND_LENGTH, TAB_BOND_ANGLE, TAB_BOND_DIHEDRAL
-    cdef extern from "bonded_interactions/bonded_tab.hpp":
-        int tabulated_bonded_set_params(int bond_type, TabulatedBondedInteraction tab_type, double min, double max, vector[double] energy, vector[double] force)
+cdef extern from "bonded_interactions/bonded_interaction_data.hpp":
+    cdef enum TabulatedBondedInteraction:
+        TAB_UNKNOWN = 0, TAB_BOND_LENGTH, TAB_BOND_ANGLE, TAB_BOND_DIHEDRAL
+
+cdef extern from "bonded_interactions/bonded_tab.hpp":
+    int tabulated_bonded_set_params(int bond_type, TabulatedBondedInteraction tab_type, double min, double max, vector[double] energy, vector[double] force)
 
 IF ELECTROSTATICS:
     cdef extern from "bonded_interactions/bonded_coulomb.hpp":

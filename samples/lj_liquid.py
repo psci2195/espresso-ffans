@@ -20,7 +20,6 @@
 This sample simulates a Lennard-Jones fluid maintained at a fixed temperature
 by a Langevin thermostat.
 """
-from __future__ import print_function
 import numpy as np
 import espressomd
 
@@ -186,7 +185,7 @@ for i in range(int_n_times):
     energies = system.analysis.energy()
     print(energies)
     obs_file.write('{ time %s } %s\n' % (system.time, energies))
-    linear_momentum = system.analysis.analyze_linear_momentum()
+    linear_momentum = system.analysis.linear_momentum()
     print(linear_momentum)
 
 #   write observables

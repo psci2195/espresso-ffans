@@ -191,10 +191,6 @@ struct ParticleProperties {
 #endif // ROTATION
 #endif // LANGEVIN_PER_PARTICLE
 
-#ifdef SWIMMER_REACTIONS
-  int catalyzer_count = 0;
-#endif
-
 #ifdef EXTERNAL_FORCES
   /** flag whether to fix a particle in space.
       Values:
@@ -591,7 +587,7 @@ void invalidate_fetch_cache();
  *  @retval ES_PART_CREATED if created
  *  @retval ES_PART_ERROR if id is illegal
  */
-int place_particle(int part, double p[3]);
+int place_particle(int part, const double *p);
 
 /** Call only on the master node: set particle velocity.
  *  @param part the particle.
@@ -618,12 +614,6 @@ void set_particle_f(int part, const Utils::Vector3d &F);
  *  @param mass its new mass.
  */
 void set_particle_mass(int part, double mass);
-
-/** Call only on the master node: set particle solvation free energy.
- *  @param part the particle.
- *  @param solvation its new solvation free energy.
- */
-void set_particle_solvation(int part, double *solvation);
 
 #ifdef ROTATIONAL_INERTIA
 /** Call only on the master node: set particle rotational inertia.
@@ -848,13 +838,13 @@ void remove_all_bonds_to(int part);
  *  Move a particle to a new position. If it does not exist, it is created.
  *  The position must be on the local node!
  *
- *  @param part the identity of the particle to move
- *  @param p    its new position
+ *  @param id the identity of the particle to move
+ *  @param pos    its new position
  *  @param _new  if true, the particle is allocated, else has to exists already
  *
  *  @return Pointer to the particle.
  */
-Particle *local_place_particle(int part, const double p[3], int _new);
+Particle *local_place_particle(int id, const Utils::Vector3d &pos, int _new);
 
 /** Used by \ref mpi_place_particle, should not be used elsewhere.
  *  Called if on a different node a new particle was added.
@@ -969,8 +959,6 @@ void pointer_to_vs_quat(Particle const *p, double const *&res);
 void pointer_to_vs_relative(Particle const *p, int const *&res1,
                             double const *&res2, double const *&res3);
 #endif
-
-void pointer_to_dip(Particle const *P, double const *&res);
 
 void pointer_to_dipm(Particle const *P, double const *&res);
 

@@ -1,9 +1,8 @@
-from __future__ import print_function, absolute_import
 include "myconfig.pxi"
-IF LB_GPU:
+IF CUDA:
     from .lb cimport HydrodynamicInteraction
     from .lb cimport lb_lbfluid_print_vtk_boundary
-    from .lb cimport python_lbnode_get_pi
+    from .lb cimport python_lbnode_get_stress
     from .lb cimport lb_lbnode_is_index_valid
     from .lb cimport lb_lbfluid_set_lattice_switch
     from .lb cimport GPU
@@ -143,11 +142,11 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            species : :obj:`integer`
+            species : :obj:`int`
                       species for which the density will apply.
             density : :obj:`float`
                       The value to which the density will be set to.
-            node : numpy-array of type :obj:`integer` of length (3)
+            node : numpy-array of type :obj:`int` of length (3)
                    If set the density will be only applied on this specific node.
 
             """
@@ -180,7 +179,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            species : :obj:`integer`
+            species : :obj:`int`
                       The species which will be changed to neutralize the system.
 
             note : The previous density of the species will be ignored and
@@ -225,7 +224,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            species : :obj:`integer`
+            species : :obj:`int`
                       Species to be initialized.
 
             """
@@ -245,7 +244,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the boundary is written to.
 
             """
@@ -257,7 +256,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the velocity is written to.
 
             """
@@ -269,7 +268,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the LB density is written to.
 
             """
@@ -281,7 +280,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the electrostatic potential is written to.
 
             """
@@ -293,7 +292,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the LB force is written to.
 
             """
@@ -305,7 +304,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the electrostatic potential is written to.
 
             note : This only works if 'es_coupling' is active.
@@ -369,11 +368,11 @@ IF ELECTROKINETICS:
 
         property pressure:
             def __get__(self):
-                cdef Vector6d pi
-                pi = python_lbnode_get_pi(self.node)
-                return np.array([[pi[0], pi[1], pi[3]],
-                                 [pi[1], pi[2], pi[4]],
-                                 [pi[3], pi[4], pi[5]]])
+                cdef Vector6d stress
+                stress = python_lbnode_get_stress(self.node)
+                return np.array([[stress[0], stress[1], stress[3]],
+                                 [stress[1], stress[2], stress[4]],
+                                 [stress[3], stress[4], stress[5]]])
 
             def __set__(self, value):
                 raise Exception("Not implemented.")
@@ -489,7 +488,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the species density is written to.
 
             """
@@ -501,7 +500,7 @@ IF ELECTROKINETICS:
 
             Parameters
             ----------
-            path : :obj:`string`
+            path : :obj:`str`
                    The path and vtk-file name the species flux is written to.
 
             """

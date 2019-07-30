@@ -131,7 +131,6 @@ inline void calc_three_body_bonded_forces(
     std::tie(f_mid, f_left, f_right) =
         calc_angle_cossquare_3body_forces(p_mid, p_left, p_right, iaparams);
     break;
-#ifdef TABULATED
   case BONDED_IA_TABULATED:
     switch (iaparams->p.tab.type) {
     case TAB_BOND_ANGLE:
@@ -145,7 +144,6 @@ inline void calc_three_body_bonded_forces(
       return;
     }
     break;
-#endif
   default:
     fprintf(stderr, "calc_three_body_bonded_forces: \
             WARNING: Bond type %d, atom %d unhandled, Atom 2: %d\n",
@@ -193,10 +191,8 @@ inline void add_bonded_virials(Particle *p1) {
       return;
     }
 
-    double a[3] = {p1->r.p[0], p1->r.p[1], p1->r.p[2]};
-    double b[3] = {p2->r.p[0], p2->r.p[1], p2->r.p[2]};
-    auto dx = get_mi_vector(a, b);
-    calc_bond_pair_force(p1, p2, iaparams, dx.data(), force);
+    auto dx = get_mi_vector(p1->r.p, p2->r.p, box_geo);
+    calc_bond_pair_force(p1, p2, iaparams, dx, force);
     *obsstat_bonded(&virials, type_num) +=
         dx[0] * force[0] + dx[1] * force[1] + dx[2] * force[2];
 
@@ -228,8 +224,8 @@ inline void add_three_body_bonded_stress(Particle *p1) {
     auto p2 = local_particles[p1->bl.e[i + 1]];
     auto p3 = local_particles[p1->bl.e[i + 2]];
 
-    auto const dx21 = -get_mi_vector(p1->r.p, p2->r.p);
-    auto const dx31 = get_mi_vector(p3->r.p, p1->r.p);
+    auto const dx21 = -get_mi_vector(p1->r.p, p2->r.p, box_geo);
+    auto const dx31 = get_mi_vector(p3->r.p, p1->r.p, box_geo);
 
     Utils::Vector3d force1, force2, force3;
     calc_three_body_bonded_forces(p1, p2, p3, iaparams, force1, force2, force3);

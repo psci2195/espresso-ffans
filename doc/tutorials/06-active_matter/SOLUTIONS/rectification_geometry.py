@@ -23,15 +23,13 @@
 #                                                                              #
 ##########################################################################
 
-from __future__ import print_function
-
 from math import cos, pi, sin
 import numpy as np
 import os
 import sys
 
 import espressomd
-espressomd.assert_features(["LB_GPU", "LB_BOUNDARIES_GPU"])
+espressomd.assert_features(["CUDA", "LB_BOUNDARIES_GPU"])
 from espressomd import assert_features, lb
 from espressomd.lbboundaries import LBBoundary
 from espressomd.shapes import Cylinder, Wall, HollowCone

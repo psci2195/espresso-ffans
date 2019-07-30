@@ -50,18 +50,15 @@ int dihedral_set_params(int bond_type, int mult, double bend, double phase);
  * If the a,b or b,c are parallel the dihedral angle is not defined in which
  * case the routine returns phi=-1. Calling functions should check for that
  *
- * @param[in] p1
- * @param[in] p2
- * @param[in] p3
- * @param[in] p4
- * @param[out] a Vector from p1 to p2
- * @param[out] b Vector from p2 to p3
- * @param[out] c Vector from p3 to p4
+ * @param[in]  p1 , p2 , p3 , p4 Particles forming the dihedral
+ * @param[out] a Vector from @p p1 to @p p2
+ * @param[out] b Vector from @p p2 to @p p3
+ * @param[out] c Vector from @p p3 to @p p4
  * @param[out] aXb Vector product of a and b
  * @param[out] l_aXb |aXB|
  * @param[out] bXc Vector product of b and c
  * @param[out] l_bXc |bXc|
- * @param[out] cosphi Cosine of the dihedral angel
+ * @param[out] cosphi Cosine of the dihedral angle
  * @param[out] phi Dihedral angle
  */
 inline void calc_dihedral_angle(Particle const *p1, Particle const *p2,
@@ -70,9 +67,9 @@ inline void calc_dihedral_angle(Particle const *p1, Particle const *p2,
                                 Utils::Vector3d &c, Utils::Vector3d &aXb,
                                 double *l_aXb, Utils::Vector3d &bXc,
                                 double *l_bXc, double *cosphi, double *phi) {
-  a = get_mi_vector(p2->r.p, p1->r.p);
-  b = get_mi_vector(p3->r.p, p2->r.p);
-  c = get_mi_vector(p4->r.p, p3->r.p);
+  a = get_mi_vector(p2->r.p, p1->r.p, box_geo);
+  b = get_mi_vector(p3->r.p, p2->r.p, box_geo);
+  c = get_mi_vector(p4->r.p, p3->r.p, box_geo);
 
   /* calculate vector product a X b and b X c */
   aXb = vector_product(a, b);

@@ -54,7 +54,7 @@
 
 extern ActiveLB lattice_switch;
 extern bool ek_initialized;
-extern EK_parameters *lb_ek_parameters_gpu;
+EK_parameters *lb_ek_parameters_gpu;
 
 // Used to limit register use for the pressure calculation
 #define EK_LINK_U00_pressure 0
@@ -1951,7 +1951,6 @@ ek_spread_particle_force(CUDA_particle_data *particle_data,
                    ek_lbparameters_gpu->dim_z;
 
     float efield[3] = {0., 0., 0.};
-#pragma unroll 3
     for (unsigned int dim = 0; dim < 3; ++dim) {
       // 0 0 0
       efield[dim] +=

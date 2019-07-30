@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import print_function, absolute_import
-
 include "myconfig.pxi"
 
 from libcpp cimport bool
@@ -76,12 +74,13 @@ cdef extern from "grid_based_algorithms/lb_interface.hpp":
     ActiveLB lb_lbfluid_get_lattice_switch() except +
     Vector6d lb_lbfluid_get_stress() except +
     bool lb_lbnode_is_index_valid(const Vector3i & ind) except +
+    Vector3i lb_lbfluid_get_shape() except +
     const Vector3d lb_lbnode_get_velocity(const Vector3i & ind) except +
     void lb_lbnode_set_velocity(const Vector3i & ind, const Vector3d & u) except +
     double lb_lbnode_get_density(const Vector3i & ind) except +
     void lb_lbnode_set_density(const Vector3i & ind, double density) except +
-    const Vector6d lb_lbnode_get_pi(const Vector3i & ind) except +
-    const Vector6d lb_lbnode_get_pi_neq(const Vector3i & ind) except +
+    const Vector6d lb_lbnode_get_stress(const Vector3i & ind) except +
+    const Vector6d lb_lbnode_get_stress_neq(const Vector3i & ind) except +
     const Vector19d lb_lbnode_get_pop(const Vector3i & ind) except +
     void lb_lbnode_set_pop(const Vector3i & ind, const Vector19d & populations) except +
     int lb_lbnode_get_boundary(const Vector3i & ind) except +
@@ -99,7 +98,6 @@ cdef extern from "grid_based_algorithms/lb_particle_coupling.hpp":
     bool lb_lbcoupling_is_seed_required()
 
 cdef extern from "grid_based_algorithms/lbgpu.hpp":
-    int lb_lbfluid_remove_total_momentum()
     void linear_velocity_interpolation(double * positions, double * velocities, int length)
     void quadratic_velocity_interpolation(double * positions, double * velocities, int length)
 
@@ -195,7 +193,6 @@ cdef inline python_lbfluid_set_gamma_even(gamma_even):
     lb_lbfluid_set_gamma_even(c_gamma_even)
 
 ###############################################
-
 cdef inline python_lbfluid_set_ext_force_density(p_ext_force_density, p_agrid, p_tau):
 
     cdef Vector3d c_ext_force_density
@@ -254,21 +251,14 @@ cdef inline python_lbfluid_get_gamma(p_gamma):
         p_gamma = c_gamma
 
 
-cdef inline python_lbfluid_get_ext_force_density(p_ext_force_density, p_agrid, p_tau):
-
+cdef inline Vector3d python_lbfluid_get_ext_force_density(p_agrid, p_tau):
     cdef Vector3d c_ext_force_density
     # call c-function
     c_ext_force_density = lb_lbfluid_get_ext_force_density()
     # unit conversion LB -> MD
-    p_ext_force_density[
-        0] = c_ext_force_density[
-            0] / p_agrid / p_agrid / p_tau / p_tau
-    p_ext_force_density[
-        1] = c_ext_force_density[
-            1] / p_agrid / p_agrid / p_tau / p_tau
-    p_ext_force_density[
-        2] = c_ext_force_density[
-            2] / p_agrid / p_agrid / p_tau / p_tau
+    for i in range(3):
+        c_ext_force_density[i] /= p_agrid * p_agrid * p_tau * p_tau
+    return c_ext_force_density
 
 cdef inline void python_lbnode_set_velocity(Vector3i node, Vector3d velocity):
     cdef double inv_lattice_speed = lb_lbfluid_get_tau() / lb_lbfluid_get_agrid()
@@ -290,16 +280,16 @@ cdef inline double python_lbnode_get_density(Vector3i node):
     cdef double c_density = lb_lbnode_get_density(node)
     return c_density / agrid / agrid / agrid
 
-cdef inline Vector6d python_lbnode_get_pi(Vector3i node):
+cdef inline Vector6d python_lbnode_get_stress(Vector3i node):
     cdef double tau = lb_lbfluid_get_tau()
     cdef double agrid = lb_lbfluid_get_agrid()
     cdef double unit_conversion = 1.0 / (tau * tau * agrid)
-    cdef Vector6d c_pi = lb_lbnode_get_pi(node)
-    return c_pi * unit_conversion
+    cdef Vector6d c_stress = lb_lbnode_get_stress(node)
+    return c_stress * unit_conversion
 
-cdef inline Vector6d python_lbnode_get_pi_neq(Vector3i node):
+cdef inline Vector6d python_lbnode_get_stress_neq(Vector3i node):
     cdef double tau = lb_lbfluid_get_tau()
     cdef double agrid = lb_lbfluid_get_agrid()
     cdef double unit_conversion = 1.0 / (tau * tau * agrid)
-    cdef Vector6d c_pi = lb_lbnode_get_pi_neq(node)
-    return c_pi * unit_conversion
+    cdef Vector6d c_stress = lb_lbnode_get_stress_neq(node)
+    return c_stress * unit_conversion

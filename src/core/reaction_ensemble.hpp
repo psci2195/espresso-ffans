@@ -112,7 +112,7 @@ public:
   ReactionAlgorithm(int seed)
       : m_seeder({seed, seed, seed}), m_generator(m_seeder),
         m_normal_distribution(0.0, 1.0), m_uniform_real_distribution(0.0, 1.0) {
-    m_generator.discard(1e6);
+    m_generator.discard(1'000'000);
   }
 
   virtual ~ReactionAlgorithm() = default;
@@ -218,7 +218,7 @@ private:
   };
 
   void add_types_to_index(std::vector<int> &type_list);
-  std::vector<double> get_random_position_in_box();
+  Utils::Vector3d get_random_position_in_box();
   std::vector<double>
   get_random_position_in_box_enhanced_proposal_of_small_radii();
 };

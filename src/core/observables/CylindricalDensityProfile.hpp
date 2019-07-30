@@ -21,12 +21,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "CylindricalPidProfileObservable.hpp"
 #include <utils/Histogram.hpp>
-#include <utils/coordinate_transformation.hpp>
+#include <utils/math/coordinate_transformation.hpp>
 
 namespace Observables {
 class CylindricalDensityProfile : public CylindricalPidProfileObservable {
 public:
-  std::vector<double> operator()(PartCfg &partCfg) const override {
+  using CylindricalPidProfileObservable::CylindricalPidProfileObservable;
+  std::vector<double> evaluate(PartCfg &partCfg) const override {
+
     std::array<size_t, 3> n_bins{{static_cast<size_t>(n_r_bins),
                                   static_cast<size_t>(n_phi_bins),
                                   static_cast<size_t>(n_z_bins)}};
@@ -37,11 +39,13 @@ public:
     std::vector<::Utils::Vector3d> folded_positions;
     std::transform(ids().begin(), ids().end(),
                    std::back_inserter(folded_positions), [&partCfg](int id) {
-                     return ::Utils::Vector3d(folded_position(partCfg[id]));
+                     return ::Utils::Vector3d(
+                         folded_position(partCfg[id].r.p, box_geo));
                    });
     for (auto &p : folded_positions) {
       p -= center;
-      histogram.update(Utils::transform_pos_to_cylinder_coordinates(p, axis));
+      histogram.update(
+          Utils::transform_coordinate_cartesian_to_cylinder(p, axis));
     }
     histogram.normalize();
     return histogram.get_histogram();

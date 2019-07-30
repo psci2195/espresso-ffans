@@ -31,7 +31,7 @@ class openGLLive(object):
     Parameters
     ----------
 
-    system : instance of :attr:`espressomd.System`
+    system : :class:`espressomd.system.System`
     window_size : array_like :obj:`int`, optional
                   Size of the visualizer window in pixels.
     name : :obj:`str`, optional
@@ -336,7 +336,7 @@ class openGLLive(object):
         IF not ROTATION:
             self.specs['director_arrows'] = False
 
-        IF not LB_GPU:
+        IF not CUDA:
             self.specs['LB_draw_velocity_plane'] = False
             self.specs['LB_draw_boundaries'] = False
             self.specs['LB_draw_nodes'] = False
@@ -494,8 +494,8 @@ class openGLLive(object):
         self.timers.append((int(interval), cb))
 
     def screenshot(self, path):
-        """Renders the current state and into an image file at path with dimensions of
-        specs['window_size'].  """
+        """Renders the current state into an image file at ``path`` with
+        dimensions of ``specs['window_size']`` in PNG format."""
 
         # ON FIRST CALL: INIT AND CREATE BUFFERS
         if not self.screenshot_initialized:
@@ -520,7 +520,7 @@ class openGLLive(object):
                 OpenGL.GL.GL_RENDERBUFFER, OpenGL.GL.GL_DEPTH_COMPONENT,
                 self.specs['window_size'][0], self.specs['window_size'][1])
             OpenGL.GL.glFramebufferRenderbuffer(
-                OpenGL.GL.GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, OpenGL.GL.GL_RENDERBUFFER, dbo)
+                OpenGL.GL.GL_FRAMEBUFFER, OpenGL.GL.GL_DEPTH_ATTACHMENT, OpenGL.GL.GL_RENDERBUFFER, dbo)
 
             self._reshape_window(
                 self.specs['window_size'][0], self.specs['window_size'][1])
@@ -536,7 +536,7 @@ class openGLLive(object):
         OpenGL.GL.glLoadMatrixf(self.camera.modelview)
         self._draw_system()
 
-        # READ THE PIXES
+        # READ THE PIXELS
         OpenGL.GL.glReadBuffer(OpenGL.GL.GL_COLOR_ATTACHMENT0)
         data = OpenGL.GL.glReadPixels(
             0, 0, self.specs['window_size'][0], self.specs['window_size'][1], OpenGL.GL.GL_RGB, OpenGL.GL.GL_FLOAT)
@@ -740,7 +740,7 @@ class openGLLive(object):
 
     def _update_nodes(self):
         self.node_box_origins = []
-        self.local_box_l = self.system.cell_system.get_state()['local_box_l']
+        self.local_box_l = np.array([0, 0, 0])
         for i in range(self.system.cell_system.node_grid[0]):
             for j in range(self.system.cell_system.node_grid[1]):
                 for k in range(self.system.cell_system.node_grid[2]):
@@ -774,7 +774,7 @@ class openGLLive(object):
         if self.specs['LB_draw_boundaries']:
             ni = 0
             for c in self.system.lbboundaries:
-                if type(c) == espressomd.ekboundaries.EKBoundary:
+                if type(c) == espressomd.lbboundaries.LBBoundary:
                     t = ni
                     ni += 1
                     s = c.get_parameter('shape')
@@ -1583,7 +1583,7 @@ class openGLLive(object):
         if self.specs['LB_draw_velocity_plane'] or self.specs['LB_draw_nodes'] or self.specs['LB_draw_node_boundaries']:
             for a in self.system.actors:
                 types = [types.append(espressomd.lb.LBFluid)]
-                IF LB_GPU:
+                IF CUDA:
                     types.append(espressomd.lb.LBFluidGPU)
 
                 # if type(a) == espressomd.lb.LBFluidGPU or type(a) ==

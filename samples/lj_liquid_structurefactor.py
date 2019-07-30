@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import print_function
 import numpy as np
 import espressomd
 
@@ -24,7 +23,6 @@ required_features = ["LENNARD_JONES"]
 espressomd.assert_features(required_features)
 
 from espressomd import thermostat
-from espressomd import analyze
 
 print("""
 =======================================================
@@ -194,7 +192,7 @@ for i in range(int_n_times):
     energies = system.analysis.energy()
     print(energies)
     obs_file.write('{ time %s } %s\n' % (system.time, energies))
-    linear_momentum = system.analysis.analyze_linear_momentum()
+    linear_momentum = system.analysis.linear_momentum()
     print(linear_momentum)
 
 

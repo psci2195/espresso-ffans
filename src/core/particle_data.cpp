@@ -466,7 +466,7 @@ void auto_exclusion(int distance);
 void free_particle(Particle *part) { part->~Particle(); }
 
 void mpi_who_has_slave(int, int) {
-  static int *sendbuf;
+  static std::vector<int> sendbuf;
   int n_part;
 
   n_part = cells_get_n_particles();
@@ -474,20 +474,19 @@ void mpi_who_has_slave(int, int) {
   if (n_part == 0)
     return;
 
-  sendbuf = Utils::realloc(sendbuf, sizeof(int) * n_part);
+  sendbuf.resize(n_part);
 
   auto end = std::transform(local_cells.particles().begin(),
-                            local_cells.particles().end(), sendbuf,
+                            local_cells.particles().end(), sendbuf.data(),
                             [](Particle const &p) { return p.p.identity; });
 
-  auto npart = std::distance(sendbuf, end);
-  MPI_Send(sendbuf, npart, MPI_INT, 0, SOME_TAG, comm_cart);
+  auto npart = std::distance(sendbuf.data(), end);
+  MPI_Send(sendbuf.data(), npart, MPI_INT, 0, SOME_TAG, comm_cart);
 }
 
-void mpi_who_has() {
+void mpi_who_has(const ParticleRange &particles) {
   static auto *sizes = new int[n_nodes];
-  int *pdata = nullptr;
-  int pdata_s = 0;
+  std::vector<int> pdata;
 
   mpi_call(mpi_who_has_slave, -1, 0);
 
@@ -497,30 +496,26 @@ void mpi_who_has() {
 
   /* then fetch particle locations */
   for (int pnode = 0; pnode < n_nodes; pnode++) {
-    COMM_TRACE(
-        fprintf(stderr, "node %d reports %d particles\n", pnode, sizes[pnode]));
     if (pnode == this_node) {
-      for (auto const &p : local_cells.particles())
+      for (auto const &p : particles)
         particle_node[p.p.identity] = this_node;
 
     } else if (sizes[pnode] > 0) {
-      if (pdata_s < sizes[pnode]) {
-        pdata_s = sizes[pnode];
-        pdata = Utils::realloc(pdata, sizeof(int) * pdata_s);
+      if (pdata.size() < sizes[pnode]) {
+        pdata.resize(sizes[pnode]);
       }
-      MPI_Recv(pdata, sizes[pnode], MPI_INT, pnode, SOME_TAG, comm_cart,
+      MPI_Recv(pdata.data(), sizes[pnode], MPI_INT, pnode, SOME_TAG, comm_cart,
                MPI_STATUS_IGNORE);
       for (int i = 0; i < sizes[pnode]; i++)
         particle_node[pdata[i]] = pnode;
     }
   }
-  free(pdata);
 }
 
 /**
  * @brief Rebuild the particle index.
  */
-void build_particle_node() { mpi_who_has(); }
+void build_particle_node() { mpi_who_has(local_cells.particles()); }
 
 /**
  *  @brief Get the mpi rank which owns the particle with id.
@@ -711,6 +706,18 @@ Utils::Cache<int, Particle> particle_fetch_cache(max_cache_size);
 
 void invalidate_fetch_cache() { particle_fetch_cache.invalidate(); }
 
+boost::optional<const Particle &> get_particle_data_local(int id) {
+  auto p = local_particles[id];
+
+  if (p and (not p->l.ghost)) {
+    return *p;
+  }
+
+  return {};
+}
+
+REGISTER_CALLBACK_ONE_RANK(get_particle_data_local)
+
 const Particle &get_particle_data(int part) {
   auto const pnode = get_particle_node(part);
 
@@ -727,8 +734,9 @@ const Particle &get_particle_data(int part) {
 
   /* Cache miss, fetch the particle,
    * put it into the cache and return a pointer into the cache. */
-  auto const cache_ptr =
-      particle_fetch_cache.put(part, mpi_recv_part(pnode, part));
+  auto const cache_ptr = particle_fetch_cache.put(
+      part, Communication::mpiCallbacks().call(Communication::Result::one_rank,
+                                               get_particle_data_local, part));
   return *cache_ptr;
 }
 
@@ -825,26 +833,17 @@ void prefetch_particle_data(std::vector<int> ids) {
                            std::make_move_iterator(parts.begin()));
 }
 
-int place_particle(int part, double p[3]) {
-  int retcode = ES_PART_OK;
+int place_particle(int part, const double *pos) {
+  Utils::Vector3d p{pos[0], pos[1], pos[2]};
 
-  int pnode;
   if (particle_exists(part)) {
-    pnode = get_particle_node(part);
-    mpi_place_particle(pnode, part, p);
-  } else {
-    /* new particle, node by spatial position */
-    pnode = cell_structure.position_to_node(Utils::Vector3d{p, p + 3});
+    mpi_place_particle(get_particle_node(part), part, p);
 
-    /* master node specific stuff */
-    particle_node[part] = pnode;
-
-    retcode = ES_PART_CREATED;
-
-    mpi_place_new_particle(pnode, part, p);
+    return ES_PART_OK;
   }
+  particle_node[part] = mpi_place_new_particle(part, p);
 
-  return retcode;
+  return ES_PART_CREATED;
 }
 
 void set_particle_v(int part, double *v) {
@@ -1062,7 +1061,9 @@ void set_particle_gamma_rot(int part, Utils::Vector3d gamma_rot) {
 #ifdef EXTERNAL_FORCES
 #ifdef ROTATION
 void set_particle_ext_torque(int part, const Utils::Vector3d &torque) {
-  auto const flag = (!torque.empty()) ? PARTICLE_EXT_TORQUE : 0;
+  // No lint because clang-tidy 6 wrongly detects this as size check.
+  auto const flag =
+      (torque != Utils::Vector3d{}) ? PARTICLE_EXT_TORQUE : 0; // NOLINT
   if (flag) {
     mpi_update_particle_property<Utils::Vector3d,
                                  &ParticleProperties::ext_torque>(part, torque);
@@ -1073,7 +1074,9 @@ void set_particle_ext_torque(int part, const Utils::Vector3d &torque) {
 #endif
 
 void set_particle_ext_force(int part, const Utils::Vector3d &force) {
-  auto const flag = (!force.empty()) ? PARTICLE_EXT_FORCE : 0;
+  // No lint because clang-tidy 6 wrongly detects this as size check.
+  auto const flag =
+      (force != Utils::Vector3d{}) ? PARTICLE_EXT_FORCE : 0; // NOLINT
   if (flag) {
     mpi_update_particle_property<Utils::Vector3d,
                                  &ParticleProperties::ext_force>(part, force);
@@ -1175,45 +1178,29 @@ void local_remove_particle(int part) {
   Particle p_destroy = extract_indexed_particle(cell, n);
 }
 
-Particle *local_place_particle(int part, const double p[3], int _new) {
-  Particle *pt;
-
-  Utils::Vector3i i{};
-  Utils::Vector3d pp = {p[0], p[1], p[2]};
-  fold_position(pp, i);
+Particle *local_place_particle(int id, const Utils::Vector3d &pos, int _new) {
+  auto pp = Utils::Vector3d{pos[0], pos[1], pos[2]};
+  auto i = Utils::Vector3i{};
+  fold_position(pp, i, box_geo);
 
   if (_new) {
+    Particle new_part;
+    new_part.p.identity = id;
+    new_part.r.p = pp;
+    new_part.l.i = i;
+
     /* allocate particle anew */
-    auto cell = cell_structure.position_to_cell(pp);
+    auto cell = cell_structure.particle_to_cell(new_part);
     if (!cell) {
-      fprintf(stderr,
-              "%d: INTERNAL ERROR: particle %d at %f(%f) %f(%f) %f(%f) "
-              "does not belong on this node\n",
-              this_node, part, p[0], pp[0], p[1], pp[1], p[2], pp[2]);
-      errexit();
+      return nullptr;
     }
-    auto rl = realloc_particlelist(cell, ++cell->n);
-    pt = new (&cell->part[cell->n - 1]) Particle;
 
-    pt->p.identity = part;
-    if (rl)
-      update_local_particles(cell);
-    else
-      local_particles[pt->p.identity] = pt;
-  } else
-    pt = local_particles[part];
+    return append_indexed_particle(cell, std::move(new_part));
+  }
 
-  PART_TRACE(fprintf(
-      stderr, "%d: local_place_particle: got particle id=%d @ %f %f %f\n",
-      this_node, part, p[0], p[1], p[2]));
-
+  auto pt = local_particles[id];
   pt->r.p = pp;
   pt->l.i = i;
-#ifdef BOND_CONSTRAINT
-  pt->r.p_old = pp;
-#endif
-
-  assert(local_particles[part] == pt);
 
   return pt;
 }

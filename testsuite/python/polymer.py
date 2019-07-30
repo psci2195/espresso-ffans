@@ -14,12 +14,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from __future__ import print_function
-import sys
 import unittest as ut
 import numpy as np
 import espressomd
-from espressomd.interactions import FeneBond
 from espressomd import polymer
 from espressomd.shapes import Wall
 
@@ -75,7 +72,7 @@ class PolymerPositions(ut.TestCase):
         particle_positions %= self.box_l
         for pos in particle_positions:
             distances = np.linalg.norm(particle_positions - pos, axis=1)
-            # exclude zero distance, i.e.,  distance to pos itself
+            # exclude zero distance, i.e., distance to pos itself
             distances = distances[np.nonzero(distances)]
             self.assertGreaterEqual(min(distances), r_min)
 
@@ -107,8 +104,8 @@ class PolymerPositions(ut.TestCase):
         for bond_angle in bond_angles:
             positions = polymer.positions(
                 n_polymers=num_poly, beads_per_chain=num_mono,
-                    bond_angle=bond_angle,
-                    bond_length=bond_length, seed=self.seed)
+                bond_angle=bond_angle, bond_length=bond_length,
+                seed=self.seed)
 
             self.assertShape(positions, num_poly, num_mono)
             self.assertBondLength(positions, bond_length)
@@ -127,22 +124,19 @@ class PolymerPositions(ut.TestCase):
         # make sure that incorrect size leads to error
         with self.assertRaises(ValueError):
             positions = polymer.positions(
-                n_polymers=num_poly + 1,
-                    beads_per_chain=num_mono,
-                    start_positions=start_positions,
-                    bond_length=bond_length, seed=self.seed)
+                n_polymers=num_poly + 1, beads_per_chain=num_mono,
+                start_positions=start_positions, bond_length=bond_length,
+                seed=self.seed)
 
         # check that start positions are actually used
         positions = polymer.positions(
-            n_polymers=num_poly,
-                beads_per_chain=num_mono,
-                start_positions=start_positions,
-                bond_length=bond_length, seed=self.seed)
+            n_polymers=num_poly, beads_per_chain=num_mono,
+            start_positions=start_positions, bond_length=bond_length,
+            seed=self.seed)
 
         self.assertListEqual(
             start_positions.tolist(),
-            positions[:,
-                      0].tolist())
+            positions[:, 0].tolist())
 
     def test_min_dist(self):
         """
@@ -154,10 +148,9 @@ class PolymerPositions(ut.TestCase):
         bond_length = 0.945
 
         positions = polymer.positions(
-            n_polymers=num_poly,
-                beads_per_chain=num_mono,
-                bond_length=bond_length,
-                min_distance=bond_length, seed=self.seed)
+            n_polymers=num_poly, beads_per_chain=num_mono,
+            bond_length=bond_length, min_distance=bond_length,
+            seed=self.seed)
 
         self.assertBondLength(positions, bond_length)
         self.assertMinDistGreaterEqual(positions, bond_length - 1e-10)
@@ -176,10 +169,8 @@ class PolymerPositions(ut.TestCase):
         c = self.system.constraints.add(wall_constraint)
 
         positions = polymer.positions(
-            n_polymers=num_poly,
-                beads_per_chain=num_mono,
-                bond_length=bond_length,
-                respect_constraints=True, seed=self.seed)
+            n_polymers=num_poly, beads_per_chain=num_mono,
+            bond_length=bond_length, respect_constraints=True, seed=self.seed)
 
         positions %= self.box_l
 
@@ -189,19 +180,16 @@ class PolymerPositions(ut.TestCase):
             self.assertGreaterEqual(z, 0.5 * self.box_l)
 
         # assert that illegal start position raises error
-        assertRaisesRegex = self.assertRaisesRegexp if sys.version_info < (
-            3, 2) else self.assertRaisesRegex
-        with assertRaisesRegex(Exception, 'Invalid start positions.'):
+        with self.assertRaisesRegex(Exception, 'Invalid start positions.'):
             illegal_start = np.array([[1., 1., 0.2 * self.box_l]])
             positions = polymer.positions(
                 n_polymers=1,
-                    beads_per_chain=10,
-                    start_positions=illegal_start,
-                    bond_length=bond_length,
-                    respect_constraints=True, seed=self.seed)
+                beads_per_chain=10,
+                start_positions=illegal_start,
+                bond_length=bond_length,
+                respect_constraints=True, seed=self.seed)
         self.system.constraints.remove(wall_constraint)
 
 
 if __name__ == "__main__":
-    print("Features: ", espressomd.features())
     ut.main()

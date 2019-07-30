@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-from __future__ import print_function, absolute_import
 include "myconfig.pxi"
 
 cimport numpy as np
@@ -34,6 +33,7 @@ import functools
 import types
 from espressomd.utils import nesting_level, array_locked, is_valid_type
 from espressomd.utils cimport make_array_locked
+from .grid cimport box_geo, folded_position, unfolded_position
 
 PARTICLE_EXT_FORCE = 1
 
@@ -160,7 +160,7 @@ cdef class ParticleHandle(object):
 
         def __get__(self):
             self.update_particle_data()
-            return make_array_locked(unfolded_position(self.particle_data))
+            return make_array_locked(unfolded_position( < Vector3d > self.particle_data.r.p, < Vector3i > self.particle_data.l.i, box_geo.length()))
 
     property pos_folded:
         """
@@ -203,7 +203,7 @@ cdef class ParticleHandle(object):
 
         def __get__(self):
             self.update_particle_data()
-            return make_array_locked(folded_position(self.particle_data))
+            return make_array_locked(folded_position(Vector3d(self.particle_data.r.p), box_geo))
 
     property image_box:
         """
@@ -284,8 +284,8 @@ cdef class ParticleHandle(object):
 
         See Also
         --------
-        add_bond() : Method to add bonds to a `Particle`
-        delete_bond() : Method to remove bonds from a `Particle`
+        espressomd.particle_data.ParticleHandle.add_bond : Method to add bonds to a `Particle`
+        espressomd.particle_data.ParticleHandle.delete_bond : Method to remove bonds from a `Particle`
 
         .. note::
            Bond ids have to be an integer >= 0.
@@ -494,10 +494,6 @@ cdef class ParticleHandle(object):
                (:attr:`espressomd.particle_data.ParticleHandle.quat`) must be
                set before setting this property, otherwise the conversion from
                lab to body frame will not be handled properly.
-
-            See also
-            --------
-            :attr:`espressomd.particle_data.ParticleHandle.torque_body`
 
             """
 
@@ -1210,7 +1206,7 @@ cdef class ParticleHandle(object):
             -----
             This needs the feature ENGINE.  The keys 'mode',
             'dipole_length', and 'rotational_friction' are only
-            available if ENGINE is used with LB or LB_GPU.
+            available if ENGINE is used with LB or CUDA.
 
             Examples
             --------
@@ -1312,8 +1308,8 @@ cdef class ParticleHandle(object):
 
         See Also
         --------
-        add
-        clear
+        espressomd.particle_data.ParticleList.add
+        espressomd.particle_data.ParticleList.clear
 
         """
         if remove_particle(self._id):

@@ -19,13 +19,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /** \file
-    This file contains everything needed to create a start-up configuration
-    of (partially charged) polymer chains with counterions and salt molecules,
-    assigning velocities to the particles and cross-linking the polymers if
-   necessary.
-
-    The corresponding header file is polymer.hpp.
-*/
+ *  This file contains everything needed to create a start-up configuration
+ *  of (partially charged) polymer chains with counterions and salt molecules,
+ *  assigning velocities to the particles and cross-linking the polymers if
+ *  necessary.
+ *
+ *  The corresponding header file is polymer.hpp.
+ */
 
 #include <cmath>
 #include <cstddef>
@@ -47,12 +47,12 @@
 #include <utils/Vector.hpp>
 #include <utils/constants.hpp>
 #include <utils/math/sqr.hpp>
-#include <utils/vec_rotate.hpp>
+#include <utils/math/vec_rotate.hpp>
 
 Utils::Vector3d random_position(std::function<double()> const &generate_rn) {
   Utils::Vector3d v;
   for (int i = 0; i < 3; ++i)
-    v[i] = box_l[i] * generate_rn();
+    v[i] = box_geo.length()[i] * generate_rn();
   return v;
 }
 
@@ -68,14 +68,15 @@ Utils::Vector3d random_unit_vector(std::function<double()> const &generate_rn) {
 }
 
 double mindist(PartCfg &partCfg, Utils::Vector3d const &pos) {
-  if (partCfg.size() == 0) {
-    return std::min(std::min(box_l[0], box_l[1]), box_l[2]);
+  if (partCfg.empty()) {
+    return std::min(std::min(box_geo.length()[0], box_geo.length()[1]),
+                    box_geo.length()[2]);
   }
 
   auto const mindist = std::accumulate(
       partCfg.begin(), partCfg.end(), std::numeric_limits<double>::infinity(),
       [&pos](double mindist, Particle const &p) {
-        return std::min(mindist, get_mi_vector(pos, p.r.p).norm2());
+        return std::min(mindist, get_mi_vector(pos, p.r.p, box_geo).norm2());
       });
 
   if (mindist < std::numeric_limits<double>::infinity())
@@ -88,7 +89,7 @@ bool is_valid_position(
     std::vector<std::vector<Utils::Vector3d>> const *positions,
     PartCfg &partCfg, double const min_distance,
     int const respect_constraints) {
-  Utils::Vector3d const folded_pos = folded_position(*pos);
+  Utils::Vector3d const folded_pos = folded_position(*pos, box_geo);
   // check if constraint is violated
   if (respect_constraints) {
     for (auto &c : Constraints::constraints) {
@@ -117,7 +118,8 @@ bool is_valid_position(
     double h;
     for (auto const p : *positions) {
       for (auto m : p) {
-        h = (folded_position(*pos) - folded_position(m)).norm2();
+        h = (folded_position(*pos, box_geo) - folded_position(m, box_geo))
+                .norm2();
         buff_mindist = std::min(h, buff_mindist);
       }
     }

@@ -34,18 +34,18 @@ double ShapeBasedConstraint::total_normal_force() const {
   return all_reduce(comm_cart, m_outer_normal_force, std::plus<double>());
 }
 
-double ShapeBasedConstraint::min_dist() {
+double ShapeBasedConstraint::min_dist(const ParticleRange &particles) {
   double global_mindist = std::numeric_limits<double>::infinity();
-  auto parts = local_cells.particles();
 
   auto const local_mindist = std::accumulate(
-      parts.begin(), parts.end(), std::numeric_limits<double>::infinity(),
+      particles.begin(), particles.end(),
+      std::numeric_limits<double>::infinity(),
       [this](double min, Particle const &p) {
         IA_parameters *ia_params;
         ia_params = get_ia_param(p.p.type, part_rep.p.type);
         if (checkIfInteraction(ia_params)) {
           double vec[3], dist;
-          m_shape->calculate_dist(folded_position(p), &dist, vec);
+          m_shape->calculate_dist(folded_position(p.r.p, box_geo), &dist, vec);
           return std::min(min, dist);
         }
         return min;
@@ -84,6 +84,8 @@ ParticleForce ShapeBasedConstraint::force(const Particle &p,
       if (thermo_switch & THERMO_DPD) {
         force += dpd_pair_force(&p, &part_rep, ia_params, dist_vec.data(), dist,
                                 dist2);
+        // Additional use of DPD here requires counter increase
+        dpd_rng_counter_increment();
       }
 #endif
     } else if (m_penetrable && (dist <= 0)) {
@@ -96,6 +98,8 @@ ParticleForce ShapeBasedConstraint::force(const Particle &p,
         if (thermo_switch & THERMO_DPD) {
           force += dpd_pair_force(&p, &part_rep, ia_params, dist_vec.data(),
                                   dist, dist2);
+          // Additional use of DPD here requires counter increase
+          dpd_rng_counter_increment();
         }
 #endif
       }
@@ -139,8 +143,7 @@ void ShapeBasedConstraint::add_energy(const Particle &p,
             &p, &part_rep, ia_params, vec, -1.0 * dist, dist * dist);
       }
     } else {
-      runtimeErrorMsg() << "Constraint "
-                        << " violated by particle " << p.p.identity;
+      runtimeErrorMsg() << "Constraint violated by particle " << p.p.identity;
     }
   }
   if (part_rep.p.type >= 0)

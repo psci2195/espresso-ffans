@@ -20,8 +20,6 @@
 This samples sets up a Lattice-Boltzmann fluid and applies an external force
 density on it.
 """
-from __future__ import print_function
-
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
@@ -39,12 +37,12 @@ print("""
 =======================================================
 """)
 
+required_features = ["EXTERNAL_FORCES"]
 if args.gpu:
     print("Using GPU implementation")
-    required_features = ["LB_GPU"]
+    required_features.append("CUDA")
 else:
     print("Using CPU implementation")
-    required_features = []
     if not args.cpu:
         print("(select the implementation with --cpu or --gpu)")
 

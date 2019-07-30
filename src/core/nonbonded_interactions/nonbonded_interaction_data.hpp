@@ -24,9 +24,9 @@
     Various procedures concerning interactions between particles.
 */
 
-#include "particle_data.hpp"
-
 #include "TabulatedPotential.hpp"
+#include "dpd.hpp"
+#include "particle_data.hpp"
 
 /** cutoff for deactivated interactions. Below 0, so that even particles on
     top of each other don't interact by chance. */
@@ -250,16 +250,8 @@ struct IA_parameters {
 #ifdef DPD
   /** \name DPD as interaction */
   /*@{*/
-  int dpd_wf = 0;
-  int dpd_twf = 0;
-  double dpd_gamma = 0.0;
-  double dpd_r_cut = INACTIVE_CUTOFF;
-  double dpd_pref1 = 0.0;
-  double dpd_pref2 = 0.0;
-  double dpd_tgamma = 0.0;
-  double dpd_tr_cut = INACTIVE_CUTOFF;
-  double dpd_pref3 = 0.0;
-  double dpd_pref4 = 0.0;
+  DPDParameters dpd_radial;
+  DPDParameters dpd_trans;
 /*@}*/
 #endif
 
@@ -269,10 +261,6 @@ struct IA_parameters {
   double THOLE_scaling_coeff;
   double THOLE_q1q2;
   /*@}*/
-#endif
-
-#ifdef SWIMMER_REACTIONS
-  double REACTION_range = INACTIVE_CUTOFF;
 #endif
 };
 
