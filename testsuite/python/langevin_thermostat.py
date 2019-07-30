@@ -328,17 +328,22 @@ class LangevinThermostat(ut.TestCase):
         system = self.system
         system.part.clear()
 
-        kT = 1.37
+        # [rnd] =========>
+        kT = 1.0
+        # [rnd]
         dt = 0.1
+        #dt = 0.01
+        #dt = 0.2
         system.time_step = dt
 
         # Translational gamma. We cannot test per-component, if rotation is on,
         # because body and space frames become different.
-        gamma = 3.1
+        gamma = 1.0
 
         # Rotational gamma
-        gamma_rot_i = 4.7
-        gamma_rot_a = 4.2, 1, 1.2
+        gamma_rot_i = 1.0
+        gamma_rot_a = 1.0, 1.0, 1.0
+        # [rnd] =========<
 
         # If we have langevin per particle:
         # per particle kT
@@ -438,7 +443,7 @@ class LangevinThermostat(ut.TestCase):
         # PARTICLE_ANISOTROPY
         gamma = np.ones(3) * gamma
         per_part_gamma = np.ones(3) * per_part_gamma
-        self.verify_diffusion(p_global, corr_vel, kT, gamma, "acf_tran.dat")
+        self.verify_diffusion(p_global, corr_vel, kT, gamma, "vBBK_acf_tran.dat")
         #if espressomd.has_features("LANGEVIN_PER_PARTICLE"):
         #    self.verify_diffusion(p_gamma, corr_vel, kT, per_part_gamma)
         #    self.verify_diffusion(p_kT, corr_vel, per_part_kT, gamma)
@@ -458,7 +463,7 @@ class LangevinThermostat(ut.TestCase):
                 eff_gamma_rot = gamma_rot_i * np.ones(3)
                 eff_per_part_gamma_rot = per_part_gamma_rot_i * np.ones(3)
 
-            self.verify_diffusion(p_global, corr_omega, kT, eff_gamma_rot, "acf_rot.dat")
+            self.verify_diffusion(p_global, corr_omega, kT, eff_gamma_rot, "vBBK_acf_rot.dat")
             #if espressomd.has_features("LANGEVIN_PER_PARTICLE"):
             #    self.verify_diffusion(
             #        p_gamma, corr_omega, kT, eff_per_part_gamma_rot)
@@ -482,10 +487,15 @@ class LangevinThermostat(ut.TestCase):
         np.savetxt(file_name, acf)
 
         # Integrate w. trapez rule
+        file_obj = open(file_name,'a')
+        ratio_vec = np.zeros((3))
         for coord in 1, 2, 3:
             I = np.trapz(acf[:, coord], acf[:, 0])
             ratio = I / (kT / gamma[coord - 1])
-            self.assertAlmostEqual(ratio, 1., delta=0.1)
+            self.assertAlmostEqual(ratio, 1., delta=0.2)
+            ratio_vec[coord - 1] = ratio
+        np.savetxt(file_obj, ratio_vec)
+        file_obj.close()
 
     @ut.skipIf(not espressomd.has_features("VIRTUAL_SITES"), "Skipped for lack of VIRTUAL_SITES")
     def test_07__virtual(self):
