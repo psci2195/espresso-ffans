@@ -459,6 +459,11 @@ void propagate_vel_finalize_p_inst(const ParticleRange &particles) {
     if (p.p.is_virtual)
       continue;
 #endif
+
+#ifdef BROOKS_BRUENGER_KARPLUS_INT
+    Utils::Vector3d velocity_0 = p.m.v;
+#endif
+
     for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
       if (!(p.p.ext_flag & COORD_FIXED(j))) {
@@ -477,6 +482,47 @@ void propagate_vel_finalize_p_inst(const ParticleRange &particles) {
       }
 #endif
     }
+
+#ifdef BROOKS_BRUENGER_KARPLUS_INT
+    if (integ_switch == INTEG_METHOD_BBK) {
+      Thermostat::GammaType langevin_pref_friction_buf;
+      Thermostat::GammaType langevin_pref_noise_buf;
+      bool aniso_flag = false;
+      friction_thermo_langevin_pref(&p, langevin_pref_friction_buf,
+                                    langevin_pref_noise_buf, aniso_flag);
+      // the velocity is set within the space system by default
+      Utils::Vector3d velocity_buf = p.m.v;
+      Utils::Vector3d velocity_0_buf = velocity_0;
+#ifdef PARTICLE_ANISOTROPY
+      if (aniso_flag) {
+        velocity_buf = convert_vector_space_to_body(p, p.m.v);
+        velocity_0_buf = convert_vector_space_to_body(p, velocity_0);
+      }
+#endif
+      for (int j = 0; j < 3; j++) {
+#ifdef EXTERNAL_FORCES
+        if (!(p.p.ext_flag & COORD_FIXED(j))) {
+#endif
+#ifdef PARTICLE_ANISOTROPY
+            // remove the friction term added in the Langevin thermostat
+            velocity_buf[j] -= 0.5 * time_step * langevin_pref_friction_buf[j] * velocity_0_buf[j] / p.p.mass;
+            // now, calculate the correct final velocity
+            velocity_buf[j] /= 1. - 0.5 * time_step * langevin_pref_friction_buf[j] / p.p.mass;
+#else
+            velocity_buf[j] -= 0.5 * time_step * langevin_pref_friction_buf * velocity_0_buf[j] / p.p.mass;
+            velocity_buf[j] /= 1. - 0.5 * time_step * langevin_pref_friction_buf / p.p.mass;
+#endif // PARTICLE_ANISOTROPY
+#ifdef EXTERNAL_FORCES
+        }
+#endif
+      }
+      if (aniso_flag) {
+        p.m.v = convert_vector_body_to_space(p, velocity_buf);
+      } else {
+        p.m.v = velocity_buf;
+      }
+    }
+#endif // BROOKS_BRUENGER_KARPLUS_INT
 
     ONEPART_TRACE(if (p.p.identity == check_id) fprintf(
         stderr, "%d: OPT: PV_2 v_new = (%.3e,%.3e,%.3e)\n", this_node, p.m.v[0],
@@ -802,6 +848,11 @@ int python_integrate(int n_steps, bool recalc_forces, bool reuse_forces_par) {
 
 void integrate_set_nvt() {
   integ_switch = INTEG_METHOD_NVT;
+  mpi_bcast_parameter(FIELD_INTEG_SWITCH);
+}
+
+void integrate_set_bbk() {
+  integ_switch = INTEG_METHOD_BBK;
   mpi_bcast_parameter(FIELD_INTEG_SWITCH);
 }
 

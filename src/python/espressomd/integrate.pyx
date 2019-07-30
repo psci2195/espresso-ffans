@@ -52,6 +52,8 @@ cdef class Integrator(object):
             self.set_steepest_descent(state['_steepest_descent_params'])
         elif self._method == "NVT":
             self.set_nvt()
+        elif self._method == "BBK":
+            self.set_bbk()
         elif self._method == "NPT":
             npt_params = state['_isotropic_npt_params']
             self.set_isotropic_npt(npt_params['ext_pressure'], npt_params[
@@ -71,7 +73,7 @@ cdef class Integrator(object):
             Reuse the forces from previous time step.
 
         """
-        if self._method == "VV" or self._method == "NVT" or self._method == "NPT":
+        if self._method in {"VV", "NVT", "NPT", "BBK"}:
             check_type_or_throw_except(
                 steps, 1, int, "Integrate requires a positive integer for the number of steps")
             check_type_or_throw_except(
@@ -160,3 +162,11 @@ cdef class Integrator(object):
             direction, 3, int, "NPT parameter direction must be an array-like of three ints")
         if (integrate_set_npt_isotropic(ext_pressure, piston, direction[0], direction[1], direction[2], cubic_box)):
             handle_errors("Encountered errors setting up the NPT integrator")
+
+    def set_bbk(self):
+        """
+        Set the integration method to the velocity Brooks-Bruenger-Karplus.
+
+        """
+        self._method = "BBK"
+        integrate_set_bbk()

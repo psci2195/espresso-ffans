@@ -129,6 +129,7 @@ class LangevinThermostat(ut.TestCase):
         else:
             system.thermostat.set_langevin(kT=0, gamma=gamma_t_i, seed=41)
 
+        system.integrator.set_nvt()
         system.time = 0
         for i in range(100):
             system.integrator.run(10)
@@ -136,7 +137,43 @@ class LangevinThermostat(ut.TestCase):
                 np.testing.assert_allclose(
                     np.copy(system.part[0].v),
                     v0 * np.exp(-gamma_t_a / system.part[0].mass * system.time),
-                    atol=4E-4)
+                    atol=2E-4)
+            else:
+                np.testing.assert_allclose(
+                    np.copy(system.part[0].v),
+                    v0 * np.exp(-gamma_t_i / system.part[0].mass * system.time),
+                    atol=45E-4)
+
+    @utx.skipIfMissingFeatures("BROOKS_BRUENGER_KARPLUS_INT")
+    def test_02_1__bbk_friction_trans(self):
+        """Tests the translational friction-only part of the thermostat
+           for the BROOKS_BRUENGER_KARPLUS_INT integration."""
+
+        system = self.system
+        # Translation
+        gamma_t_i = 2
+        gamma_t_a = np.array((0.5, 2, 1.5))
+        v0 = np.array((5., 5., 5.))
+
+        system.time_step = 0.0005
+        system.part.clear()
+        system.part.add(pos=(0, 0, 0), v=v0)
+        if espressomd.has_features("MASS"):
+            system.part[0].mass = 3
+        if espressomd.has_features("PARTICLE_ANISOTROPY"):
+            system.thermostat.set_langevin(kT=0, gamma=gamma_t_a, seed=41)
+        else:
+            system.thermostat.set_langevin(kT=0, gamma=gamma_t_i, seed=41)
+
+        system.integrator.set_bbk()
+        system.time = 0
+        for i in range(100):
+            system.integrator.run(10)
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                np.testing.assert_allclose(
+                    np.copy(system.part[0].v),
+                    v0 * np.exp(-gamma_t_a / system.part[0].mass * system.time),
+                    atol=1E-4)
             else:
                 np.testing.assert_allclose(
                     np.copy(system.part[0].v),

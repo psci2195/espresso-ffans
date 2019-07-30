@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define COLLISION_DETECTION
 #define LANGEVIN_PER_PARTICLE
 #define SWIMMER_REACTIONS
+#define BROOKS_BRUENGER_KARPLUS_INT
 
 #define NPT
 

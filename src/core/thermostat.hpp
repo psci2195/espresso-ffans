@@ -181,26 +181,21 @@ inline Utils::Vector3d v_noise(int particle_id) {
          Utils::Vector3d::broadcast(0.5);
 }
 
-/** Langevin thermostat core function.
-    Collects the particle velocity (different for ENGINE, PARTICLE_ANISOTROPY).
-    Collects the langevin parameters kt, gamma (different for
-   LANGEVIN_PER_PARTICLE). Applies the noise and friction term.
+/** Langevin thermostat frictional and thermal prefixes
+ *  determination based on its per-particle vs global parameters.
+ *  The de facto particle anisotropy is also verified here
+ *  according to the prefixes symmetry.
 */
-
-inline void friction_thermo_langevin(Particle *p) {
-
-  // Eary exit for virtual particles without thermostat
-  if (p->p.is_virtual && !thermo_virtual) {
-    p->f.f = Utils::Vector3d{};
-    return;
-  }
-
+inline void friction_thermo_langevin_pref(Particle *p,
+                 Thermostat::GammaType &langevin_pref_friction_buf,
+                 Thermostat::GammaType &langevin_pref_noise_buf,
+                 bool &aniso_flag) {
   // Determine prefactors for the friction (pref1) and the noise (pref2) term
   extern Thermostat::GammaType langevin_pref1;
   extern Thermostat::GammaType langevin_pref2;
   // first, set defaults
-  Thermostat::GammaType langevin_pref_friction_buf = langevin_pref1;
-  Thermostat::GammaType langevin_pref_noise_buf = langevin_pref2;
+  langevin_pref_friction_buf = langevin_pref1;
+  langevin_pref_noise_buf = langevin_pref2;
 // Override defaults if per-particle values for T and gamma are given
 #ifdef LANGEVIN_PER_PARTICLE
   auto const constexpr langevin_temp_coeff = 24.0;
@@ -227,6 +222,35 @@ inline void friction_thermo_langevin(Particle *p) {
       langevin_pref_noise_buf = langevin_pref2;
   }
 #endif /* LANGEVIN_PER_PARTICLE */
+#ifdef PARTICLE_ANISOTROPY
+  // Particle frictional isotropy check
+  aniso_flag =
+      (langevin_pref_friction_buf[0] != langevin_pref_friction_buf[1]) ||
+      (langevin_pref_friction_buf[1] != langevin_pref_friction_buf[2]) ||
+      (langevin_pref_noise_buf[0] != langevin_pref_noise_buf[1]) ||
+      (langevin_pref_noise_buf[1] != langevin_pref_noise_buf[2]);
+#endif // PARTICLE_ANISOTROPY
+}
+
+/** Langevin thermostat core function.
+    Collects the particle velocity (different for ENGINE, PARTICLE_ANISOTROPY).
+    Collects the langevin parameters kt, gamma (different for
+   LANGEVIN_PER_PARTICLE). Applies the noise and friction term.
+*/
+
+inline void friction_thermo_langevin(Particle *p) {
+
+  // Eary exit for virtual particles without thermostat
+  if (p->p.is_virtual && !thermo_virtual) {
+    p->f.f = Utils::Vector3d{};
+    return;
+  }
+
+  Thermostat::GammaType langevin_pref_friction_buf;
+  Thermostat::GammaType langevin_pref_noise_buf;
+  bool aniso_flag = false;
+  friction_thermo_langevin_pref(p, langevin_pref_friction_buf,
+                                langevin_pref_noise_buf, aniso_flag);
 
   // Get velocity effective in the thermostatting
   Utils::Vector3d velocity = p->m.v;
@@ -239,12 +263,6 @@ inline void friction_thermo_langevin(Particle *p) {
   }
 #endif
 #ifdef PARTICLE_ANISOTROPY
-  // Particle frictional isotropy check
-  auto aniso_flag =
-      (langevin_pref_friction_buf[0] != langevin_pref_friction_buf[1]) ||
-      (langevin_pref_friction_buf[1] != langevin_pref_friction_buf[2]) ||
-      (langevin_pref_noise_buf[0] != langevin_pref_noise_buf[1]) ||
-      (langevin_pref_noise_buf[1] != langevin_pref_noise_buf[2]);
   // In case of anisotropic particle: body-fixed reference frame. Otherwise:
   // lab-fixed reference frame.
   if (aniso_flag)
