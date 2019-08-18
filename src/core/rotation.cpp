@@ -335,6 +335,11 @@ void convert_torques_propagate_omega(const ParticleRange &particles) {
         stderr, "%d: OPT: SCAL f = (%.3e,%.3e,%.3e) v_old = (%.3e,%.3e,%.3e)\n",
         this_node, p.f.f[0], p.f.f[1], p.f.f[2], p.m.v[0], p.m.v[1], p.m.v[2]));
 
+#ifdef BROOKS_BRUENGER_KARPLUS_INT
+    // velocity at t = t + time_step_half
+    Utils::Vector3d omega_05 = p.m.omega;
+#endif
+
     // Propagation of angular velocities
     p.m.omega[0] += time_step_half * p.f.torque[0] / p.p.rinertia[0];
     p.m.omega[1] += time_step_half * p.f.torque[1] / p.p.rinertia[1];
@@ -342,6 +347,27 @@ void convert_torques_propagate_omega(const ParticleRange &particles) {
 
     // zeroth estimate of omega
     Utils::Vector3d omega_0 = p.m.omega;
+
+#ifdef BROOKS_BRUENGER_KARPLUS_INT
+    Thermostat::GammaType langevin_pref_friction_buf = sentinel(Thermostat::GammaType{});
+    Thermostat::GammaType langevin_pref_noise_buf = sentinel(Thermostat::GammaType{});
+    if (integ_switch == INTEG_METHOD_BBK) {
+      friction_thermo_langevin_pref_rot(&p, langevin_pref_friction_buf,
+                                    langevin_pref_noise_buf);
+      for (int j = 0; j < 3; j++) {
+        if (p.p.rotation & COORD_FIXED(j)) {
+#ifdef PARTICLE_ANISOTROPY
+            // remove the friction term added in the Langevin thermostat
+            p.m.omega[j] += time_step_half * langevin_pref_friction_buf[j] * omega_05[j] / p.p.rinertia[j];
+#else
+            p.m.omega[j] += time_step_half * langevin_pref_friction_buf * omega_05[j] / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
+        }
+      }
+      // new zeroth estimate according to the vBBK solution
+      omega_0 = p.m.omega;
+    }
+#endif // BROOKS_BRUENGER_KARPLUS_INT
 
     /* if the tensor of inertia is isotropic, the following refinement is not
        needed.
@@ -359,6 +385,20 @@ void convert_torques_propagate_omega(const ParticleRange &particles) {
       Wd[2] = p.m.omega[0] * p.m.omega[1] * rinertia_diff_01 / p.p.rinertia[2];
 
       p.m.omega = omega_0 + time_step_half * Wd;
+#ifdef BROOKS_BRUENGER_KARPLUS_INT
+      if (integ_switch == INTEG_METHOD_BBK) {
+        for (int j = 0; j < 3; j++) {
+          if (p.p.rotation & COORD_FIXED(j)) {
+#ifdef PARTICLE_ANISOTROPY
+            // now, calculate the correct final velocity
+            p.m.omega[j] /= 1. + time_step_half * langevin_pref_friction_buf[j] / p.p.rinertia[j];
+#else
+            p.m.omega[j] /= 1. + time_step_half * langevin_pref_friction_buf / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
+          }
+        }
+      }
+#endif // BROOKS_BRUENGER_KARPLUS_INT
     }
     ONEPART_TRACE(if (p.p.identity == check_id) fprintf(
         stderr, "%d: OPT: PV_2 v_new = (%.3e,%.3e,%.3e)\n", this_node, p.m.v[0],

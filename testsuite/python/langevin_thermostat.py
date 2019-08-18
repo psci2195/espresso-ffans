@@ -39,6 +39,10 @@ class LangevinThermostat(ut.TestCase):
     def setUpClass(cls):
         np.random.seed(42)
 
+    def setUp(self):
+        # defaults for each test case
+        self.system.integrator.set_nvt()
+
     def check_velocity_distribution(self, vel, minmax, n_bins, error_tol, kT):
         """check the recorded particle distributions in velocity against a
            histogram with n_bins bins. Drop velocities outside minmax. Check
@@ -214,7 +218,49 @@ class LangevinThermostat(ut.TestCase):
             if espressomd.has_features("PARTICLE_ANISOTROPY"):
                 np.testing.assert_allclose(
                     np.copy(system.part[0].omega_body),
-                    o0 * np.exp(-gamma_r_a / rinertia * system.time), atol=5E-4)
+                    o0 * np.exp(-gamma_r_a / rinertia * system.time), atol=2.5E-4)
+            else:
+                np.testing.assert_allclose(
+                    np.copy(system.part[0].omega_body),
+                    o0 * np.exp(-gamma_r_i / rinertia * system.time), atol=5E-4)
+
+    @utx.skipIfMissingFeatures("ROTATION", "BROOKS_BRUENGER_KARPLUS_INT")
+    def test_03_1__bbk_friction_rot(self):
+        """Tests the rotational friction-only part of the thermostat
+           for the BROOKS_BRUENGER_KARPLUS_INT integration."""
+
+        system = self.system
+        # Translation
+        gamma_t_i = 2
+        gamma_t_a = [0.5, 2, 1.5]
+        gamma_r_i = 3
+        gamma_r_a = np.array((1.5, 0.7, 1.2))
+        o0 = np.array((5., 5., 5.))
+
+        system.time_step = 0.0005
+        system.part.clear()
+        system.part.add(pos=(0, 0, 0), omega_body=o0, rotation=(1, 1, 1))
+        if espressomd.has_features("ROTATIONAL_INERTIA"):
+            system.part[0].rinertia = [2, 2, 2]
+        if espressomd.has_features("PARTICLE_ANISOTROPY"):
+            system.thermostat.set_langevin(
+                kT=0, gamma=gamma_t_a, gamma_rotation=gamma_r_a, seed=41)
+        else:
+            system.thermostat.set_langevin(
+                kT=0, gamma=gamma_t_i, gamma_rotation=gamma_r_i, seed=41)
+
+        system.integrator.set_bbk()
+        system.time = 0
+        if espressomd.has_features("ROTATIONAL_INERTIA"):
+            rinertia = np.copy(system.part[0].rinertia)
+        else:
+            rinertia = np.array((1, 1, 1))
+        for i in range(100):
+            system.integrator.run(10)
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                np.testing.assert_allclose(
+                    np.copy(system.part[0].omega_body),
+                    o0 * np.exp(-gamma_r_a / rinertia * system.time), atol=1.25E-4)
             else:
                 np.testing.assert_allclose(
                     np.copy(system.part[0].omega_body),
@@ -310,7 +356,7 @@ class LangevinThermostat(ut.TestCase):
                     system.part[int(N / 2):].omega_body
         v_minmax = 5
         bins = 4
-        error_tol = 0.012
+        error_tol = 0.0135
         self.check_velocity_distribution(v_kT, v_minmax, bins, error_tol, kT)
         self.check_velocity_distribution(v_kT2, v_minmax, bins, error_tol, kT2)
 

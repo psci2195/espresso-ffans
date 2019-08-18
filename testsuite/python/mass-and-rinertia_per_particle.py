@@ -62,8 +62,6 @@ class ThermoTest(ut.TestCase):
     @classmethod
     def setUpClass(cls):
         # Handle a random generator seeding
-        seed1 = 15
-        np.random.seed(seed1)
         seed2 = 42
         # The Espresso system configuration
         cls.system.seed = [s * seed2 for s in range(cls.system.cell_system.get_state()["n_nodes"])]
@@ -71,8 +69,13 @@ class ThermoTest(ut.TestCase):
         cls.system.cell_system.skin = 5.0
 
     def setUp(self):
+        # Handle a random generator seeding
+        seed1 = 15
+        np.random.seed(seed1)
+        # defaults for each test case
         self.system.time = 0.0
         self.system.part.clear()
+        self.system.integrator.set_nvt()
 
     def set_langevin_global_defaults(self):
         """
@@ -258,7 +261,7 @@ class ThermoTest(ut.TestCase):
                             self.assertLess(abs(
                                 self.system.part[ind].omega_body[j] - math.exp(- self.gamma_rot_p_validate[k, j] * self.system.time / self.J[j])), tol)
 
-    def check_fluctuation_dissipation(self, n):
+    def check_fluctuation_dissipation(self, n, tolerance):
         """
         Check the fluctuation-dissipation relations: thermalization
         and diffusion properties.
@@ -328,7 +331,6 @@ class ThermoTest(ut.TestCase):
                     dr_norm[k] += (sum(dr2[k,:]) -
                                    sigma2_tr[k]) / sigma2_tr[k]
 
-        tolerance = 0.15
         Ev = 0.5 * self.mass * v2 / (n * loops)
         Eo = 0.5 * self.J * o2 / (n * loops)
         dv = np.zeros((2))
@@ -428,6 +430,7 @@ class ThermoTest(ut.TestCase):
     def test_case_01(self):
         # Each of 2 kind of particles will be represented by n instances:
         n = 500
+        tolerance = 0.15
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -435,7 +438,7 @@ class ThermoTest(ut.TestCase):
             kT=self.kT, gamma=self.gamma_global, seed=42)
         self.set_diffusivity_tran()
         # Actual integration and validation run
-        self.check_fluctuation_dissipation(n)
+        self.check_fluctuation_dissipation(n, tolerance)
 
     # Test case 1.0: particle specific gamma but not temperature / dissipation
     # only
@@ -456,6 +459,7 @@ class ThermoTest(ut.TestCase):
     def test_case_11(self):
         # Each of 2 kind of particles will be represented by n instances:
         n = 500
+        tolerance = 0.15
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -464,7 +468,7 @@ class ThermoTest(ut.TestCase):
         self.set_particle_specific_gamma(n)
         self.set_diffusivity_tran()
         # Actual integration and validation run
-        self.check_fluctuation_dissipation(n)
+        self.check_fluctuation_dissipation(n, tolerance)
 
     # Test case 2.0: particle specific temperature but not gamma / dissipation
     # only
@@ -485,6 +489,7 @@ class ThermoTest(ut.TestCase):
     def test_case_21(self):
         # Each of 2 kind of particles will be represented by n instances:
         n = 500
+        tolerance = 0.15
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -493,7 +498,7 @@ class ThermoTest(ut.TestCase):
         self.set_particle_specific_temperature(n)
         self.set_diffusivity_tran()
         # Actual integration and validation run
-        self.check_fluctuation_dissipation(n)
+        self.check_fluctuation_dissipation(n, tolerance)
 
     # Test case 3.0: both particle specific gamma and temperature /
     # dissipation only
@@ -515,6 +520,7 @@ class ThermoTest(ut.TestCase):
     def test_case_31(self):
         # Each of 2 kind of particles will be represented by n instances:
         n = 500
+        tolerance = 0.032
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -524,7 +530,25 @@ class ThermoTest(ut.TestCase):
         self.set_particle_specific_temperature(n)
         self.set_diffusivity_tran()
         # Actual integration and validation run
-        self.check_fluctuation_dissipation(n)
+        self.check_fluctuation_dissipation(n, tolerance)
+
+    # Test case 3.2: both particle specific gamma and temperature /
+    # fluctuation & dissipation / vBBK
+    def test_case_32(self):
+        # Each of 2 kind of particles will be represented by n instances:
+        n = 500
+        tolerance = 0.033
+        self.fluctuation_dissipation_param_setup(n)
+        self.set_langevin_global_defaults()
+        # The test case-specific thermostat and per-particle parameters
+        self.system.thermostat.set_langevin(
+            kT=self.kT, gamma=self.gamma_global, seed=42)
+        self.set_particle_specific_gamma(n)
+        self.set_particle_specific_temperature(n)
+        self.set_diffusivity_tran()
+        # Actual integration and validation run
+        self.system.integrator.set_bbk()
+        self.check_fluctuation_dissipation(n, tolerance)
 
     # Test case 4.0: no particle specific values / rotational specific global
     # thermostat / dissipation only
@@ -547,6 +571,7 @@ class ThermoTest(ut.TestCase):
     def test_case_41(self):
         # Each of 2 kind of particles will be represented by n instances:
         n = 500
+        tolerance = 0.15
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults_rot_differ()
         # The test case-specific thermostat and per-particle parameters
@@ -557,7 +582,7 @@ class ThermoTest(ut.TestCase):
             gamma_rotation=self.gamma_global_rot, seed=42)
         self.set_diffusivity_tran()
         # Actual integration and validation run
-        self.check_fluctuation_dissipation(n)
+        self.check_fluctuation_dissipation(n, tolerance)
 
 
 if __name__ == '__main__':

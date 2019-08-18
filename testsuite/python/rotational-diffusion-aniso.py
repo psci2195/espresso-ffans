@@ -38,11 +38,13 @@ class RotDiffAniso(ut.TestCase):
     # Particle properties
     J = [0.0, 0.0, 0.0]
 
-    np.random.seed(4)
 
     def setUp(self):
+        # defaults for each test case
         self.system.time = 0.0
         self.system.part.clear()
+        self.system.integrator.set_nvt()
+        np.random.seed(4)
 
     def rot_diffusion_param_setup(self, n):
         """
@@ -101,7 +103,7 @@ class RotDiffAniso(ut.TestCase):
             if espressomd.has_features("ROTATION"):
                 self.system.part[ind].omega_body = [0.0, 0.0, 0.0]
 
-    def check_rot_diffusion(self, n):
+    def check_rot_diffusion(self, n, tolerance):
         """
         The rotational diffusion tests based on the reference work
         [Perrin, F. (1936) Journal de Physique et Le Radium, 7(1), 1-11.
@@ -184,7 +186,6 @@ class RotDiffAniso(ut.TestCase):
 
             # Actual comparison.
 
-            tolerance = 0.2
             # Too small values of the direction cosines are out of interest
             # compare to 0..1 range.
             min_value = 0.14
@@ -306,11 +307,22 @@ class RotDiffAniso(ut.TestCase):
 
     def test_case_00(self):
         n = 800
+        tolerance = 0.199
         self.rot_diffusion_param_setup(n)
         self.system.thermostat.set_langevin(
             kT=self.kT, gamma=self.gamma_global, seed=42)
         # Actual integration and validation run
-        self.check_rot_diffusion(n)
+        self.check_rot_diffusion(n, tolerance)
+
+    def test_case_01(self):
+        n = 800
+        tolerance = 0.199
+        self.rot_diffusion_param_setup(n)
+        self.system.thermostat.set_langevin(
+            kT=self.kT, gamma=self.gamma_global, seed=42)
+        # Actual integration and validation run
+        self.system.integrator.set_bbk()
+        self.check_rot_diffusion(n, tolerance)
 
 
 if __name__ == '__main__':

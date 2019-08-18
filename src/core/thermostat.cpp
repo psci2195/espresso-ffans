@@ -44,14 +44,8 @@ double temperature = 0.0;
 bool thermo_virtual = true;
 
 using Thermostat::GammaType;
-
-namespace {
-/* These functions return the sentinel value for the
-   Langevin params, indicating that they have not been
-   set yet. */
 constexpr double sentinel(double) { return -1.0; }
 Utils::Vector3d sentinel(Utils::Vector3d) { return {-1.0, -1.0, -1.0}; }
-} // namespace
 
 /* LANGEVIN THERMOSTAT */
 
