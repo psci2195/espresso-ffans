@@ -227,12 +227,22 @@ inline Utils::Vector3d friction_thermo_langevin(const Particle *p) {
 #endif /* LANGEVIN_PER_PARTICLE */
 
   // Get velocity effective in the thermostatting
+  Utils::Vector3d vel_eff = p->m.v;
+#ifdef GROOT_WARREN_INT
+  // just an indication that we are on the Step 4 of the Velocity Verlet.
+  // Otherwise, we should use regular velocity (the Step 1).
+  if ((p->m.v_tilda[0] != 0.) ||
+     (p->m.v_tilda[1] != 0.) ||
+     (p->m.v_tilda[2] != 0.)) {
+    vel_eff = p->m.v_tilda;
+  }
+#endif // GROOT_WARREN_INT
 #ifdef ENGINE
   auto const velocity = (p->swim.v_swim != 0)
-                            ? p->m.v - p->swim.v_swim * p->r.calc_director()
-                            : p->m.v;
+                            ? vel_eff - p->swim.v_swim * p->r.calc_director()
+                            : vel_eff;
 #else
-  auto const &velocity = p->m.v;
+  auto const &velocity = vel_eff;
 #endif
 #ifdef PARTICLE_ANISOTROPY
   // Particle frictional isotropy check
@@ -301,6 +311,18 @@ inline void friction_thermo_langevin_rotation(Particle *p) {
   }
 #endif /* LANGEVIN_PER_PARTICLE */
 
+  // Get angular velocity effective in the thermostatting
+  Utils::Vector3d omega_eff = p->m.omega;
+#ifdef GROOT_WARREN_INT
+  // just an indication that we are on the Step 4 of the Velocity Verlet.
+  // Otherwise, we should use regular velocity (the Step 1).
+  if ((p->m.omega_tilda[0] != 0.) ||
+     (p->m.omega_tilda[1] != 0.) ||
+     (p->m.omega_tilda[2] != 0.)) {
+    omega_eff = p->m.omega_tilda;
+  }
+#endif // GROOT_WARREN_INT
+
   // Rotational degrees of virtual sites are thermostatted,
   // so no switching here
 
@@ -309,17 +331,17 @@ inline void friction_thermo_langevin_rotation(Particle *p) {
   for (int j = 0; j < 3; j++) {
 #ifdef PARTICLE_ANISOTROPY
     if (langevin_pref_noise_buf[j] > 0.0) {
-      p->f.torque[j] = -langevin_pref_friction_buf[j] * p->m.omega[j] +
+      p->f.torque[j] = -langevin_pref_friction_buf[j] * omega_eff[j] +
                        langevin_pref_noise_buf[j] * noise[j];
     } else {
-      p->f.torque[j] = -langevin_pref_friction_buf[j] * p->m.omega[j];
+      p->f.torque[j] = -langevin_pref_friction_buf[j] * omega_eff[j];
     }
 #else
     if (langevin_pref_noise_buf > 0.0) {
-      p->f.torque[j] = -langevin_pref_friction_buf * p->m.omega[j] +
+      p->f.torque[j] = -langevin_pref_friction_buf * omega_eff[j] +
                        langevin_pref_noise_buf * noise[j];
     } else {
-      p->f.torque[j] = -langevin_pref_friction_buf * p->m.omega[j];
+      p->f.torque[j] = -langevin_pref_friction_buf * omega_eff[j];
     }
 #endif
   }

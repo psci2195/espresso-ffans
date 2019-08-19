@@ -211,6 +211,11 @@ void propagate_omega_quat_particle(Particle *p) {
 
   for (int j = 0; j < 3; j++) {
     p->m.omega[j] += time_step_half * Wd[j];
+#ifdef GROOT_WARREN_INT
+    if (integ_switch == INTEG_METHOD_GROOT_WARREN) {
+      p->m.omega_tilda[j] = p->m.omega[j] + (gw_lambda - 0.5) * time_step * Wd[j];
+    }
+#endif // GROOT_WARREN_INT
   }
   ONEPART_TRACE(if (p->p.identity == check_id)
                     fprintf(stderr, "%d: OPT: PV_1 v_new = (%.3e,%.3e,%.3e)\n",
@@ -333,6 +338,15 @@ void convert_torques_propagate_omega(const ParticleRange &particles) {
 
       p.m.omega = omega_0 + time_step_half * Wd;
     }
+    #ifdef GROOT_WARREN_INT
+    // now, let's cleanup and be prepared towards the Step 1
+    // of the Velocity Verlet
+    if (integ_switch == INTEG_METHOD_GROOT_WARREN) {
+      for (int j = 0; j < 3; j++) {
+        p.m.omega_tilda[j] = 0.;
+      }
+    }
+    #endif // GROOT_WARREN_INT
     ONEPART_TRACE(if (p.p.identity == check_id) fprintf(
         stderr, "%d: OPT: PV_2 v_new = (%.3e,%.3e,%.3e)\n", this_node, p.m.v[0],
         p.m.v[1], p.m.v[2]));

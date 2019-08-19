@@ -33,17 +33,20 @@ cdef class Integrator:
     cdef str _method
     cdef object _steepest_descent_params
     cdef object _isotropic_npt_params
+    cdef object _groot_warren_params
 
     def __init__(self):
         self._method = "VV"
         self._steepest_descent_params = {}
         self._isotropic_npt_params = {}
+        self._groot_warren_params = {}
 
     def __getstate__(self):
         state = {}
         state['_method'] = self._method
         state['_steepest_descent_params'] = self._steepest_descent_params
         state['_isotropic_npt_params'] = self._isotropic_npt_params
+        state['_groot_warren_params'] = self._groot_warren_params
         return state
 
     def __setstate__(self, state):
@@ -56,6 +59,9 @@ cdef class Integrator:
             npt_params = state['_isotropic_npt_params']
             self.set_isotropic_npt(npt_params['ext_pressure'], npt_params[
                                    'piston'], direction=npt_params['direction'], cubic_box=npt_params['cubic_box'])
+        elif self._method == "GW":
+            gw_params = state['_groot_warren_params']
+            self.set_groot_warren(gw_params['lambda'])
 
     def run(self, steps=1, recalc_forces=False, reuse_forces=False):
         """
@@ -127,6 +133,15 @@ cdef class Integrator:
         """
         self._method = "NVT"
         integrate_set_nvt()
+    
+    def set_groot_warren(self, lambda0 = 0.5):
+        """
+        Set the integration method to the Groot-Warren modification
+        of the Velocity Verlet integration within the NVT ensemble.
+
+        """
+        self._method = "GW"
+        integrate_set_groot_warren(lambda0)
 
     def set_isotropic_npt(self, ext_pressure, piston, direction=[0, 0, 0],
                           cubic_box=False):

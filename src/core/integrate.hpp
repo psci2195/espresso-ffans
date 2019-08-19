@@ -30,6 +30,7 @@
 #define INTEG_METHOD_NPT_ISO 0
 #define INTEG_METHOD_NVT 1
 #define INTEG_METHOD_STEEPEST_DESCENT 2
+#define INTEG_METHOD_GROOT_WARREN 3
 
 /************************************************************/
 /** \name Exported Variables */
@@ -38,6 +39,9 @@
 
 /** Switch determining which Integrator to use. */
 extern int integ_switch;
+
+// The Groot-Warren lambda
+extern double gw_lambda;
 
 /** incremented if a Verlet update is done, aka particle resorting. */
 extern int n_verlet_updates;
@@ -97,5 +101,6 @@ int python_integrate(int n_steps, bool recalc_forces, bool reuse_forces);
 void integrate_set_nvt();
 int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
                                 int ydir, int zdir, bool cubic_box);
+void integrate_set_groot_warren(double lambda0);
 
 #endif

@@ -270,11 +270,17 @@ struct ParticleForce {
 struct ParticleMomentum {
   /** velocity. */
   Utils::Vector3d v = {0., 0., 0.};
+#ifdef GROOT_WARREN_INT
+  Utils::Vector3d v_tilda = {0., 0., 0.};
+#endif // GROOT_WARREN_INT
 
 #ifdef ROTATION
   /** angular velocity
       ALWAYS IN PARTICLE FIXED, I.E., CO-ROTATING COORDINATE SYSTEM */
   Utils::Vector3d omega = {0., 0., 0.};
+#ifdef GROOT_WARREN_INT
+  Utils::Vector3d omega_tilda = {0., 0., 0.};
+#endif // GROOT_WARREN_INT
 #endif
 };
 

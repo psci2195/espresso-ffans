@@ -36,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SWIMMER_REACTIONS
 
 #define NPT
+#define GROOT_WARREN_INT
 
 #define DPD
 #define METADYNAMICS

@@ -27,6 +27,7 @@ cdef extern from "integrate.hpp" nogil:
     cdef int python_integrate(int n_steps, int recalc_forces, int reuse_forces)
     cdef void integrate_set_nvt()
     cdef int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir, int ydir, int zdir, int cubic_box)
+    cdef void integrate_set_groot_warren(double lambda0)
     cdef extern cbool skin_set
 cdef inline int _integrate(int nSteps, int recalc_forces, int reuse_forces):
     with nogil:

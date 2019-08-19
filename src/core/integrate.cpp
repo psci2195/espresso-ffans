@@ -72,6 +72,8 @@
 /*******************  variables  *******************/
 
 int integ_switch = INTEG_METHOD_NVT;
+// The Groot-Warren lambda
+double gw_lambda = 0.5;
 
 int n_verlet_updates = 0;
 
@@ -430,6 +432,13 @@ void propagate_vel_finalize_p_inst(const ParticleRange &particles) {
 #endif
           /* Propagate velocity: v(t+dt) = v(t+0.5*dt) + 0.5*dt * a(t+dt) */
           p.m.v[j] += 0.5 * time_step * p.f.f[j] / p.p.mass;
+#ifdef GROOT_WARREN_INT
+          // now, let's cleanup and be prepared towards the Step 1
+          // of the Velocity Verlet
+          if (integ_switch == INTEG_METHOD_GROOT_WARREN) {
+            p.m.v_tilda[j] = 0.;
+          }
+#endif // GROOT_WARREN_INT
 #ifdef EXTERNAL_FORCES
       }
 #endif
@@ -583,6 +592,11 @@ void propagate_vel(const ParticleRange &particles) {
 #endif
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * a(t) */
           p.m.v[j] += 0.5 * time_step * p.f.f[j] / p.p.mass;
+#ifdef GROOT_WARREN_INT
+          if (integ_switch == INTEG_METHOD_GROOT_WARREN) {
+            p.m.v_tilda[j] = p.m.v[j] + (gw_lambda - 0.5) * time_step * p.f.f[j] / p.p.mass;
+          }
+#endif // GROOT_WARREN_INT
       }
     }
   }
@@ -635,6 +649,12 @@ void propagate_vel_pos(const ParticleRange &particles) {
       {
         /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
         p.m.v[j] += 0.5 * time_step * p.f.f[j] / p.p.mass;
+
+#ifdef GROOT_WARREN_INT
+        if (integ_switch == INTEG_METHOD_GROOT_WARREN) {
+          p.m.v_tilda[j] = p.m.v[j] + (gw_lambda - 0.5) * time_step * p.f.f[j] / p.p.mass;
+        }
+#endif // GROOT_WARREN_INT
 
         /* Propagate positions (only NVT): p(t + dt)   = p(t) + dt *
          * v(t+0.5*dt) */
@@ -712,6 +732,13 @@ int python_integrate(int n_steps, bool recalc_forces, bool reuse_forces_par) {
 void integrate_set_nvt() {
   integ_switch = INTEG_METHOD_NVT;
   mpi_bcast_parameter(FIELD_INTEG_SWITCH);
+}
+
+void integrate_set_groot_warren(double lambda0) {
+  integ_switch = INTEG_METHOD_GROOT_WARREN;
+  gw_lambda = lambda0;
+  mpi_bcast_parameter(FIELD_INTEG_SWITCH);
+  mpi_bcast_parameter(FIELD_GW_LAMBDA);
 }
 
 /** Parse integrate npt_isotropic command */
