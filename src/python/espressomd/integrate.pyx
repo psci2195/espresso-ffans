@@ -77,7 +77,7 @@ cdef class Integrator:
             Reuse the forces from previous time step.
 
         """
-        if self._method == "VV" or self._method == "NVT" or self._method == "NPT":
+        if self._method == "VV" or self._method == "NVT" or self._method == "NPT" or self._method == "GW":
             check_type_or_throw_except(
                 steps, 1, int, "Integrate requires a positive integer for the number of steps")
             check_type_or_throw_except(
