@@ -307,7 +307,7 @@ class RotDiffAniso(ut.TestCase):
 
     def test_case_00(self):
         n = 800
-        tolerance = 0.199
+        tolerance = 0.2
         self.rot_diffusion_param_setup(n)
         self.system.thermostat.set_langevin(
             kT=self.kT, gamma=self.gamma_global, seed=42)
@@ -316,7 +316,7 @@ class RotDiffAniso(ut.TestCase):
 
     def test_case_01(self):
         n = 800
-        tolerance = 0.199
+        tolerance = 0.2
         self.rot_diffusion_param_setup(n)
         self.system.thermostat.set_langevin(
             kT=self.kT, gamma=self.gamma_global, seed=42)

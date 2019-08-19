@@ -40,6 +40,7 @@
 
 #include <cmath>
 #include <tuple>
+#include <utils/math/rotation_matrix.hpp>
 
 /** \name Thermostat switches*/
 /************************************************************/
@@ -192,7 +193,7 @@ inline Utils::Vector3d v_noise(int particle_id) {
  *  The de facto particle anisotropy is also verified here
  *  according to the prefixes symmetry.
 */
-inline void friction_thermo_langevin_pref(Particle *p,
+inline void friction_thermo_langevin_pref(const Particle *p,
                  Thermostat::GammaType &langevin_pref_friction_buf,
                  Thermostat::GammaType &langevin_pref_noise_buf,
                  bool &aniso_flag) {
@@ -244,7 +245,7 @@ inline void friction_thermo_langevin_pref(Particle *p,
  *  The de facto particle anisotropy is also verified here
  *  according to the prefixes symmetry.
 */
-inline void friction_thermo_langevin_pref_rot(Particle *p,
+inline void friction_thermo_langevin_pref_rot(const Particle *p,
                  Thermostat::GammaType &langevin_pref_friction_buf,
                  Thermostat::GammaType &langevin_pref_noise_buf) {
   // Determine prefactors for the friction (pref1) and the noise (pref2) term
@@ -288,13 +289,10 @@ inline void friction_thermo_langevin_pref_rot(Particle *p,
     Collects the langevin parameters kt, gamma (different for
    LANGEVIN_PER_PARTICLE). Applies the noise and friction term.
 */
-
-inline void friction_thermo_langevin(Particle *p) {
-
-  // Eary exit for virtual particles without thermostat
+inline Utils::Vector3d friction_thermo_langevin(const Particle *p) {
+  // Early exit for virtual particles without thermostat
   if (p->p.is_virtual && !thermo_virtual) {
-    p->f.f = Utils::Vector3d{};
-    return;
+    return {};
   }
 
   Thermostat::GammaType langevin_pref_friction_buf;
@@ -304,44 +302,30 @@ inline void friction_thermo_langevin(Particle *p) {
                                 langevin_pref_noise_buf, aniso_flag);
 
   // Get velocity effective in the thermostatting
-  Utils::Vector3d velocity = p->m.v;
 #ifdef ENGINE
-  if (p->swim.v_swim != 0) {
-    // In case of the engine feature, the velocity is relaxed
-    // towards a swimming velocity oriented parallel to the
-    // particles director
-    velocity -= p->swim.v_swim * p->r.calc_director();
-  }
+  auto const velocity = (p->swim.v_swim != 0)
+                            ? p->m.v - p->swim.v_swim * p->r.calc_director()
+                            : p->m.v;
+#else
+  auto const &velocity = p->m.v;
 #endif
 #ifdef PARTICLE_ANISOTROPY
   // In case of anisotropic particle: body-fixed reference frame. Otherwise:
   // lab-fixed reference frame.
-  if (aniso_flag)
-    velocity = convert_vector_space_to_body(*p, velocity);
+  auto const friction = aniso_flag ? [&]() {
+    auto const A = rotation_matrix(p->r.quat);
 
-  // Do the actual (anisotropic) hermostatting
-  Utils::Vector3d noise = v_noise(p->p.identity);
-  for (int j = 0; j < 3; j++) {
-    p->f.f[j] = langevin_pref_friction_buf[j] * velocity[j] +
-                langevin_pref_noise_buf[j] * noise[j];
-  }
+    return transpose(A) *
+    hadamard_product(langevin_pref_friction_buf, A * velocity);
+  }()  : hadamard_product(langevin_pref_friction_buf, velocity);
 
-  if (aniso_flag)
-    p->f.f = convert_vector_body_to_space(*p, p->f.f);
+  return friction +
+         hadamard_product(langevin_pref_noise_buf, v_noise(p->p.identity));
 #else
   // Do the actual (isotropic) thermostatting
-  p->f.f = langevin_pref_friction_buf * velocity +
-           langevin_pref_noise_buf * v_noise(p->p.identity);
+  return langevin_pref_friction_buf * velocity +
+         langevin_pref_noise_buf * v_noise(p->p.identity);
 #endif // PARTICLE_ANISOTROPY
-
-  // printf("%d: %e %e %e %e %e %e\n",p->p.identity,
-  // p->f.f[0],p->f.f[1],p->f.f[2], p->m.v[0],p->m.v[1],p->m.v[2]);
-  ONEPART_TRACE(if (p->p.identity == check_id)
-                    fprintf(stderr, "%d: OPT: LANG f = (%.3e,%.3e,%.3e)\n",
-                            this_node, p->f.f[0], p->f.f[1], p->f.f[2]));
-  THERMO_TRACE(fprintf(stderr, "%d: Thermo: P %d: force=(%.3e,%.3e,%.3e)\n",
-                       this_node, p->p.identity, p->f.f[0], p->f.f[1],
-                       p->f.f[2]));
 }
 
 #ifdef ROTATION

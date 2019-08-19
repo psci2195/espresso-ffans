@@ -520,7 +520,7 @@ class ThermoTest(ut.TestCase):
     def test_case_31(self):
         # Each of 2 kind of particles will be represented by n instances:
         n = 500
-        tolerance = 0.032
+        tolerance = 0.041
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
@@ -537,7 +537,7 @@ class ThermoTest(ut.TestCase):
     def test_case_32(self):
         # Each of 2 kind of particles will be represented by n instances:
         n = 500
-        tolerance = 0.033
+        tolerance = 0.040
         self.fluctuation_dissipation_param_setup(n)
         self.set_langevin_global_defaults()
         # The test case-specific thermostat and per-particle parameters
