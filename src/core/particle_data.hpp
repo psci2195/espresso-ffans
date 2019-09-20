@@ -290,10 +290,26 @@ struct ParticleMomentum {
   /** velocity. */
   Utils::Vector3d v = {0., 0., 0.};
 
+#ifdef ERMAK_BUCKHOLZ
+  /** velocity at the beginning of the leap.
+   * It is needed for the correct velocity and position
+   * random walk correlation. Ref. eq. (7b) of Ermak1980.
+  */
+  Utils::Vector3d v0 = {0., 0., 0.};
+#endif // ERMAK_BUCKHOLZ
+
 #ifdef ROTATION
   /** angular velocity
       ALWAYS IN PARTICLE FIXED, I.E., CO-ROTATING COORDINATE SYSTEM */
   Utils::Vector3d omega = {0., 0., 0.};
+#ifdef ERMAK_BUCKHOLZ
+  /** body frame omega saved.
+   * It is needed for the correct velocity and position
+   * random walk correlation at the final velocity Verlet step.
+   * Ref. eq. (7b) of Ermak1980.
+  */
+  Utils::Vector3d omega0 = {0., 0., 0.};
+#endif // ERMAK_BUCKHOLZ
 #endif
 };
 

@@ -469,9 +469,10 @@ void propagate_vel_finalize_p_inst() {
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_drag_vel(p, 0.5 * time_step);
       bd_random_walk_vel(p, 0.5 * time_step);
-    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
-      bd_drag_vel(p, time_step);
-      bd_random_walk_vel(p, time_step);
+    } else if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ
+                | THERMO_EB_VELPOS)) {
+      bd_drag_vel(p, 0.0);
+      bd_random_walk_vel(p, 0.0);
     }
 #endif // BROWNIAN_DYNAMICS
     for (int j = 0; j < 3; j++) {
@@ -488,7 +489,8 @@ void propagate_vel_finalize_p_inst() {
 #endif
         {
 #ifdef BROWNIAN_DYNAMICS
-          if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
+          if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+                | THERMO_EB_VELPOS)))
 #endif // BROWNIAN_DYNAMICS
           {
             /* Propagate velocity: v(t+dt) = v(t+0.5*dt) + 0.5*dt * a(t+dt) */
@@ -642,6 +644,13 @@ void propagate_vel() {
       // In contrast to the BD, the previous step velocity is kept!
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
       // means no changes in the original velocity.
+      // Let's keep zero step placeholder, hence, the counter
+      // based RNG will be updated well.
+      bd_vel_steps_rot(p, 0.0);
+    } else if (thermo_switch & THERMO_EB_VELPOS) {
+      // This method starts from velocity. However, we've grouped all updated in
+      // the propagate_pos() in order to keep it simple: there is no more VV
+      // for the EB method. Hence, this split to steps is redundant.
       bd_vel_steps_rot(p, 0.0);
     }
 #endif // BROWNIAN_DYNAMICS
@@ -660,6 +669,8 @@ void propagate_vel() {
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
       // means no changes in the original velocity.
       bd_vel_steps_tran(p, 0.0);
+    } else if (thermo_switch & THERMO_EB_VELPOS) {
+      bd_vel_steps_tran(p, 0.0);
     }
 #endif // BROWNIAN_DYNAMICS
     for (int j = 0; j < 3; j++) {
@@ -676,7 +687,8 @@ void propagate_vel() {
         } else
 #endif
 #ifdef BROWNIAN_DYNAMICS
-            if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
+            if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+                  | THERMO_EB_VELPOS)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * a(t) */
@@ -705,7 +717,15 @@ void propagate_pos() {
   else {
     for (auto &p : local_cells.particles()) {
 #if defined(ROTATION) && defined(BROWNIAN_DYNAMICS)
-      bd_pos_steps_rot(p, time_step);
+      if (thermo_switch & THERMO_BROWNIAN) {
+        bd_pos_steps_rot(p, time_step);
+      } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+        bd_pos_steps_rot(p, time_step);
+        bd_vel_steps_rot(p, time_step);
+      } else if (thermo_switch & THERMO_EB_VELPOS) {
+        bd_vel_steps_rot(p, time_step);
+        bd_pos_steps_rot(p, time_step);
+      }
 #endif
 // Don't propagate translational degrees of freedom of vs
 #ifdef VIRTUAL_SITES
@@ -713,7 +733,15 @@ void propagate_pos() {
         continue;
 #endif
 #ifdef BROWNIAN_DYNAMICS
-      bd_pos_steps_tran(p, time_step);
+      if (thermo_switch & THERMO_BROWNIAN) {
+        bd_pos_steps_tran(p, time_step);
+      } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+        bd_pos_steps_tran(p, time_step);
+        bd_vel_steps_tran(p, time_step);
+      } else if (thermo_switch & THERMO_EB_VELPOS) {
+        bd_vel_steps_tran(p, time_step);
+        bd_pos_steps_tran(p, time_step);
+      }
 #endif // BROWNIAN_DYNAMICS
       for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
@@ -721,7 +749,8 @@ void propagate_pos() {
 #endif
         {
 #ifdef BROWNIAN_DYNAMICS
-          if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
+          if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+                | THERMO_EB_VELPOS)))
 #endif // BROWNIAN_DYNAMICS
           {
             /* Propagate positions (only NVT): p(t + dt)   = p(t) + dt *
@@ -751,13 +780,23 @@ void propagate_vel_pos() {
 #ifdef BROWNIAN_DYNAMICS
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_vel_steps_rot(p, 0.5 * time_step);
-    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+    }
+      else if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ
+                | THERMO_EB_VELPOS)) {
       // In contrast to the BD, the previous step velocity is kept!
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
       // means no changes in the original velocity.
       bd_vel_steps_rot(p, 0.0);
     }
-    bd_pos_steps_rot(p, time_step);
+    if (thermo_switch & THERMO_BROWNIAN) {
+      bd_pos_steps_rot(p, time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      bd_pos_steps_rot(p, time_step);
+      bd_vel_steps_rot(p, time_step);
+    } else if (thermo_switch & THERMO_EB_VELPOS) {
+      bd_vel_steps_rot(p, time_step);
+      bd_pos_steps_rot(p, time_step);
+    }
 #endif // BROWNIAN_DYNAMICS
 #endif
 
@@ -769,13 +808,22 @@ void propagate_vel_pos() {
 #ifdef BROWNIAN_DYNAMICS
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_vel_steps_tran(p, 0.5 * time_step);
-    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+    } else if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ
+                | THERMO_EB_VELPOS)) {
       // In contrast to the BD, the previous step velocity is kept!
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
       // means no changes in the original velocity.
       bd_vel_steps_tran(p, 0.0);
     }
-    bd_pos_steps_tran(p, time_step);
+    if (thermo_switch & THERMO_BROWNIAN) {
+      bd_pos_steps_tran(p, time_step);
+    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
+      bd_pos_steps_tran(p, time_step);
+      bd_vel_steps_tran(p, time_step);
+    } else if (thermo_switch & THERMO_EB_VELPOS) {
+      bd_vel_steps_tran(p, time_step);
+      bd_pos_steps_tran(p, time_step);
+    }
 #endif // BROWNIAN_DYNAMICS
     for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
@@ -783,7 +831,8 @@ void propagate_vel_pos() {
 #endif
       {
 #ifdef BROWNIAN_DYNAMICS
-        if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)))
+        if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+            | THERMO_EB_VELPOS)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
@@ -992,7 +1041,8 @@ int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
  * @param dt              Time interval (Input)
  */
 void bd_vel_steps_tran(Particle &p, double dt) {
-  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+      | THERMO_EB_VELPOS)) {
     bd_drag_vel(p, dt);
     bd_random_walk_vel(p, dt);
   }
@@ -1006,7 +1056,8 @@ void bd_vel_steps_tran(Particle &p, double dt) {
  * @param dt              Time interval (Input)
  */
 void bd_vel_steps_rot(Particle &p, double dt) {
-  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+      | THERMO_EB_VELPOS)) {
     bd_drag_vel_rot(p, dt);
     bd_random_walk_vel_rot(p, dt);
   }
@@ -1020,7 +1071,8 @@ void bd_vel_steps_rot(Particle &p, double dt) {
  * @param dt              Time interval (Input)
  */
 void bd_pos_steps_tran(Particle &p, double dt) {
-  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+      | THERMO_EB_VELPOS)) {
     bd_drag(p, dt);
     bd_random_walk(p, dt);
   }
@@ -1034,7 +1086,8 @@ void bd_pos_steps_tran(Particle &p, double dt) {
  * @param dt              Time interval (Input)
  */
 void bd_pos_steps_rot(Particle &p, double dt) {
-  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ)) {
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+      | THERMO_EB_VELPOS)) {
     bd_drag_rot(p, dt);
     bd_random_walk_rot(p, dt);
   }
@@ -1121,7 +1174,11 @@ void bd_random_walk(Particle &p, double dt) {
 
   // Eq. (14.37) is factored by the Gaussian noise (12.22) with its squared
   // magnitude defined in the second eq. (14.38), Schlick2010.
-  Utils::Vector3d noise = v_noise_g(p.p.identity, RNGSalt::BROWNIAN);
+  //Utils::Vector3d noise = v_noise_g(p.p.identity, RNGSalt::BROWNIAN);
+  Utils::Vector3d noise = {0.0, 0.0, 0.0};
+  for (int j = 0; j < 3; j++) {
+    noise[j] = gaussian_random();
+  }
   for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
     if (!(p.p.ext_flag & COORD_FIXED(j)))
@@ -1156,6 +1213,14 @@ void bd_random_walk(Particle &p, double dt) {
         if (brown_sigma_pos_temp_inv_local > 0.0) {
           delta_pos_body[j] = sqrt(dt + (1. / (2. * beta)) * (-3. +
             4. * exp(-beta * dt) - exp(-2. * beta * dt)))
+            / brown_sigma_pos_temp_inv_local;
+        } else {
+          delta_pos_body[j] = 0.;
+        }
+      } else if (thermo_switch & THERMO_EB_VELPOS) {
+        // velocity is taken from the previous step end.
+        if (brown_sigma_pos_temp_inv_local > 0.0) {
+          delta_pos_body[j] = sqrt(dt - (2. / beta) * (1 - exp(-beta * dt)) / (1 + exp(-beta * dt)))
             / brown_sigma_pos_temp_inv_local;
         } else {
           delta_pos_body[j] = 0.;

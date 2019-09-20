@@ -146,7 +146,8 @@ cdef class Thermostat(object):
 
             thermo_list.append(lang_dict)
         IF BROWNIAN_DYNAMICS:
-            if thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ):
+            if thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+                                | THERMO_EB_VELPOS):
                 lang_dict = {}
                 lang_dict["type"] = "BROWNIAN"
                 lang_dict["kT"] = temperature
@@ -554,5 +555,41 @@ cdef class Thermostat(object):
             # allowed
             thermo_switch = (thermo_switch & (~THERMO_LANGEVIN))
             thermo_switch = (thermo_switch | THERMO_ERMAK_BUCKHOLZ)
+            mpi_bcast_parameter(FIELD_THERMO_SWITCH)
+            return True
+
+        @AssertThermostatType(THERMO_EB_VELPOS)
+        def set_eb_opt2(self, kT=None, gamma=None, gamma_rotation=None,
+                         act_on_virtual=False, seed=None):
+            """Sets the Ermak-Buckholz thermostat (second option from Ermak1980)
+            with required parameters 'kT' 'gamma'
+            and optional parameter 'gamma_rotation'.
+    
+            Parameters
+            -----------
+            kT : :obj:`float`
+             Thermal energy of the simulated heat bath.
+            gamma : :obj:`float`
+                    Contains the friction coefficient of the bath. If the feature 'PARTICLE_ANISOTROPY'
+                    is compiled in then 'gamma' can be a list of three positive floats, for the friction
+                    coefficient in each cardinal direction.
+            gamma_rotation : :obj:`float`, optional
+                             The same applies to 'gamma_rotation', which requires the feature
+                             'ROTATION' to work properly. But also accepts three floating point numbers
+                             if 'PARTICLE_ANISOTROPY' is also compiled in.
+            act_on_virtual : :obj:`bool`, optional
+                    If true the thermostat will act on virtual sites, default is off.
+            seed : :obj:`int`, required
+                    Initial counter value (or seed) of the philox RNG.
+                    Required on first activation of the langevin thermostat.
+    
+            """
+
+            self.set_langevin(kT, gamma, gamma_rotation, act_on_virtual, seed)
+            global thermo_switch
+            # this is safe because this combination of thermostats is not
+            # allowed
+            thermo_switch = (thermo_switch & (~THERMO_LANGEVIN))
+            thermo_switch = (thermo_switch | THERMO_EB_VELPOS)
             mpi_bcast_parameter(FIELD_THERMO_SWITCH)
             return True

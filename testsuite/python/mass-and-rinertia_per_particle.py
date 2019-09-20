@@ -648,6 +648,23 @@ class ThermoTest(ut.TestCase):
             # Actual integration and validation run
             self.check_dissipation_viscous_drag(n)
 
+    # Test case 0.0.3:
+    # no particle specific values / dissipation viscous drag only / EB only.
+    # LD will require too much computational time
+    # (one is tested offline though).
+    if "ERMAK_BUCKHOLZ" in espressomd.features():
+        def test_case_003(self):
+            system = self.system
+            # Each of 2 kind of particles will be represented by n instances:
+            n = 1
+            self.dissipation_viscous_drag_setup_bd()
+            self.set_langevin_global_defaults()
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.set_eb_opt2(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_dissipation_viscous_drag(n)
+
     # Test case 0.1: no particle specific values / fluctuation & dissipation
     # Same particle and thermostat parameters for LD and BD/EB are required in order
     # to test the BD/EB consistency by means of NVT-ensemble.
@@ -701,6 +718,23 @@ class ThermoTest(ut.TestCase):
                 kT=self.kT, gamma=self.gamma_global, seed=42)
             # Actual integration and validation run
             self.check_fluctuation_dissipation(n, therm_steps, loops)
+        if "ERMAK_BUCKHOLZ" in espressomd.features():
+            self.set_initial_cond()
+            # Large time-step is OK for EB.
+            system.time_step = 10.0
+            # Less number of loops are needed in case of BD because the velocity
+            # distribution is already as required. It is not a result of a real dynamics.
+            loops = 8
+            # The EB does not require so the warmup. Only 1 step is enough.
+            # More steps are taken just to be sure that they will not lead
+            # to wrong results.
+            therm_steps = 2
+            # The test case-specific thermostat
+            system.thermostat.turn_off()
+            system.thermostat.set_eb_opt2(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_fluctuation_dissipation(n, therm_steps, loops)
 
     # Test case 1.0.0: particle specific gamma but not temperature / dissipation
     # only / LD only
@@ -749,6 +783,22 @@ class ThermoTest(ut.TestCase):
             # Actual integration and validation run
             self.check_dissipation_viscous_drag(n)
 
+    # Test case 1.0.3: particle specific gamma but not temperature /
+    # dissipation viscous drag only / EB only.
+    if "ERMAK_BUCKHOLZ" in espressomd.features():
+        def test_case_103(self):
+            system = self.system
+            # Each of 2 kind of particles will be represented by n instances:
+            n = 1
+            self.dissipation_viscous_drag_setup_bd()
+            self.set_langevin_global_defaults()
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.set_eb_opt2(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            self.set_particle_specific_gamma(n)
+            # Actual integration and validation run
+            self.check_dissipation_viscous_drag(n)
+
     # Test case 1.1: particle specific gamma but not temperature / fluctuation
     # & dissipation / LD and BD/EB
     def test_case_11(self):
@@ -785,6 +835,17 @@ class ThermoTest(ut.TestCase):
             # The test case-specific thermostat
             system.thermostat.turn_off()
             system.thermostat.set_eb(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_fluctuation_dissipation(n, therm_steps, loops)
+        if "ERMAK_BUCKHOLZ" in espressomd.features():
+            self.set_initial_cond()
+            system.time_step = 10.0
+            loops = 8
+            therm_steps = 2
+            # The test case-specific thermostat
+            system.thermostat.turn_off()
+            system.thermostat.set_eb_opt2(
                 kT=self.kT, gamma=self.gamma_global, seed=42)
             # Actual integration and validation run
             self.check_fluctuation_dissipation(n, therm_steps, loops)
@@ -835,6 +896,22 @@ class ThermoTest(ut.TestCase):
             self.set_particle_specific_temperature(n)
             # Actual integration and validation run
             self.check_dissipation_viscous_drag(n)
+    
+    # Test case 2.0.3: particle specific temperature but not gamma / dissipation
+    # viscous drag only / EB only
+    if "ERMAK_BUCKHOLZ" in espressomd.features():
+        def test_case_203(self):
+            system = self.system
+            # Each of 2 kind of particles will be represented by n instances:
+            n = 1
+            self.dissipation_viscous_drag_setup_bd()
+            self.set_langevin_global_defaults()
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.set_eb_opt2(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            self.set_particle_specific_temperature(n)
+            # Actual integration and validation run
+            self.check_dissipation_viscous_drag(n)
 
     # Test case 2.1: particle specific temperature but not gamma / fluctuation
     # & dissipation / LD and BD/EB
@@ -872,6 +949,17 @@ class ThermoTest(ut.TestCase):
             # The test case-specific thermostat and per-particle parameters
             system.thermostat.turn_off()
             system.thermostat.set_eb(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_fluctuation_dissipation(n, therm_steps, loops)
+        if "ERMAK_BUCKHOLZ" in espressomd.features():
+            self.set_initial_cond()
+            system.time_step = 10.0
+            loops = 8
+            therm_steps = 2
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.turn_off()
+            system.thermostat.set_eb_opt2(
                 kT=self.kT, gamma=self.gamma_global, seed=42)
             # Actual integration and validation run
             self.check_fluctuation_dissipation(n, therm_steps, loops)
@@ -926,6 +1014,23 @@ class ThermoTest(ut.TestCase):
             # Actual integration and validation run
             self.check_dissipation_viscous_drag(n)
 
+    # Test case 3.0.3: both particle specific gamma and temperature /
+    # dissipation viscous drag only / EB only
+    if "ERMAK_BUCKHOLZ" in espressomd.features():
+        def test_case_303(self):
+            system = self.system
+            # Each of 2 kind of particles will be represented by n instances:
+            n = 1
+            self.dissipation_viscous_drag_setup_bd()
+            self.set_langevin_global_defaults()
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.set_eb_opt2(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            self.set_particle_specific_gamma(n)
+            self.set_particle_specific_temperature(n)
+            # Actual integration and validation run
+            self.check_dissipation_viscous_drag(n)
+
     # Test case 3.1: both particle specific gamma and temperature /
     # fluctuation & dissipation / LD and BD/EB
     def test_case_31(self):
@@ -963,6 +1068,17 @@ class ThermoTest(ut.TestCase):
             # The test case-specific thermostat
             system.thermostat.turn_off()
             system.thermostat.set_eb(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_fluctuation_dissipation(n, therm_steps, loops)
+        if "ERMAK_BUCKHOLZ" in espressomd.features():
+            self.set_initial_cond()
+            system.time_step = 10.0
+            loops = 8
+            therm_steps = 2
+            # The test case-specific thermostat
+            system.thermostat.turn_off()
+            system.thermostat.set_eb_opt2(
                 kT=self.kT, gamma=self.gamma_global, seed=42)
             # Actual integration and validation run
             self.check_fluctuation_dissipation(n, therm_steps, loops)
@@ -1020,6 +1136,24 @@ class ThermoTest(ut.TestCase):
             # Actual integration and validation run
             self.check_dissipation_viscous_drag(n)
 
+    # Test case 4.0.3: no particle specific values / rotational specific global
+    # thermostat / dissipation only / EB only
+    if "ERMAK_BUCKHOLZ" in espressomd.features():
+        def test_case_403(self):
+            system = self.system
+            # Each of 2 kind of particles will be represented by n instances:
+            n = 1
+            self.dissipation_viscous_drag_setup_bd()
+            self.set_langevin_global_defaults_rot_differ()
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.set_eb_opt2(
+                kT=self.kT,
+                gamma=self.gamma_global,
+                gamma_rotation=self.gamma_global_rot,
+                seed=42)
+            # Actual integration and validation run
+            self.check_dissipation_viscous_drag(n)
+
     # Test case 4.1: no particle specific values / rotational specific global
     # thermostat / fluctuation & dissipation / LD and BD/EB
     def test_case_41(self):
@@ -1060,6 +1194,20 @@ class ThermoTest(ut.TestCase):
             # The test case-specific thermostat
             system.thermostat.turn_off()
             system.thermostat.set_eb(
+                kT=self.kT,
+                gamma=self.gamma_global,
+                gamma_rotation=self.gamma_global_rot,
+                seed=42)
+            # Actual integration and validation run
+            self.check_fluctuation_dissipation(n, therm_steps, loops)
+        if "ERMAK_BUCKHOLZ" in espressomd.features():
+            self.set_initial_cond()
+            system.time_step = 10.0
+            loops = 8
+            therm_steps = 2
+            # The test case-specific thermostat
+            system.thermostat.turn_off()
+            system.thermostat.set_eb_opt2(
                 kT=self.kT,
                 gamma=self.gamma_global,
                 gamma_rotation=self.gamma_global_rot,

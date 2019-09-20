@@ -288,7 +288,7 @@ void thermo_init() {
     thermo_init_brownian();
 #endif
 #ifdef ERMAK_BUCKHOLZ
-  if (thermo_switch & THERMO_ERMAK_BUCKHOLZ)
+  if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS))
     thermo_init_ermak_buckholz();
 #endif
 }

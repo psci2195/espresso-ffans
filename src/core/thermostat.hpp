@@ -51,7 +51,10 @@
 #define THERMO_NPT_ISO 4
 #define THERMO_LB 8
 #define THERMO_BROWNIAN 16
+// Position->Velocity EB correlation
 #define THERMO_ERMAK_BUCKHOLZ 32
+// Velocity->Position EB correlation
+#define THERMO_EB_VELPOS 64
 /*@}*/
 
 namespace Thermostat {

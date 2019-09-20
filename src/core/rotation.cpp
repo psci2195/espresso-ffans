@@ -224,7 +224,7 @@ void propagate_omega_quat_particle(Particle *p) {
   if (!p->p.rotation)
     return;
 #ifdef BROWNIAN_DYNAMICS
-  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ))
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS))
     return;
 #endif // BROWNIAN_DYNAMICS
 
@@ -341,10 +341,10 @@ void convert_torques_propagate_omega() {
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_drag_vel_rot(p, 0.5 * time_step);
       bd_random_walk_vel_rot(p, 0.5 * time_step);
-    } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
-      bd_drag_vel_rot(p, time_step);
-      bd_random_walk_vel_rot(p, time_step);
-    } else
+    } else if (!(thermo_switch & (THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS))) //{
+      //bd_drag_vel_rot(p, 0.0);
+      //bd_random_walk_vel_rot(p, 0.0);
+    //} else
 #endif // BROWNIAN_DYNAMICS
     {
       ONEPART_TRACE(if (p.p.identity == check_id) fprintf(
@@ -511,6 +511,11 @@ void bd_drag_rot(Particle &p, double dt) {
     if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
     {
+#ifndef PARTICLE_ANISOTROPY
+      double beta = local_gamma / p.p.rinertia[j];
+#else
+      double beta = local_gamma[j] / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
       // only a conservative part of the torque is used here
 #ifndef PARTICLE_ANISOTROPY
       dphi[j] = p.f.torque[j] * dt / (local_gamma);
@@ -519,11 +524,6 @@ void bd_drag_rot(Particle &p, double dt) {
 #endif // ROTATIONAL_INERTIA
       // the remaining deterministic terms of the eq. (8a), Ermak1980.
       if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
-#ifndef PARTICLE_ANISOTROPY
-        double beta = local_gamma / p.p.rinertia[j];
-#else
-        double beta = local_gamma[j] / p.p.rinertia[j];
-#endif // PARTICLE_ANISOTROPY
         double tmp_exp = (1. - exp(-beta * dt)) / beta;
         // velocity is taken from the previous step end.
         dphi[j] += tmp_exp * ((p.m.omega[j]) - (p.f.torque[j] / (p.p.rinertia[j] * beta)));
@@ -532,6 +532,12 @@ void bd_drag_rot(Particle &p, double dt) {
         p.r.dphi[j] = dphi[j];
         if (dphi[j] != dphi[j]) printf("\n ERROR bd_drag_rot dt=%e beta=%e, tmp_exp=%e, omega=%e, torque=%e, rinertia =%e",
         dt, beta, tmp_exp, p.m.omega[j], p.f.torque[j], p.p.rinertia[j]);
+      } else if ((thermo_switch & THERMO_EB_VELPOS) && (dt > 0.)) {
+        dphi[j] += (1 / beta) * (p.m.omega[j] + p.m.omega0[j]
+                    - 2.0 * p.f.torque[j] / (p.p.rinertia[j] * beta)) *
+                    (1 - exp(-beta * dt)) / (1 + exp(-beta * dt));
+        if (dphi[j] != dphi[j]) printf("\n ERROR 2 bd_drag_rot dt=%e beta=%e, omega=%e, torque=%e, rinertia =%e",
+        dt, beta, p.m.omega[j], p.f.torque[j], p.p.rinertia[j]);
       }
     }
   } // j
@@ -570,6 +576,11 @@ void bd_drag_vel_rot(Particle &p, double dt) {
     } else
 #endif
     {
+#ifndef PARTICLE_ANISOTROPY
+      double beta = local_gamma / p.p.rinertia[j];
+#else
+      double beta = local_gamma[j] / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
       if (thermo_switch & THERMO_BROWNIAN) {
         // only conservative part of the force is used here
         // NOTE: velocity is assigned here and propagated by thermal part further
@@ -581,11 +592,6 @@ void bd_drag_vel_rot(Particle &p, double dt) {
 #endif // ROTATIONAL_INERTIA
       } else if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
         // deterministic terms of the eq. (8b), Ermak1980
-#ifndef PARTICLE_ANISOTROPY
-        double beta = local_gamma / p.p.rinertia[j];
-#else
-        double beta = local_gamma[j] / p.p.rinertia[j];
-#endif // PARTICLE_ANISOTROPY
         double tmp_exp = (1. - exp(-beta * dt));
         double tmp_exp2 = (1. - exp(-2. * beta * dt));
         double C = 2 * beta * dt - 3. + 4. * exp(-beta * dt)
@@ -596,6 +602,12 @@ void bd_drag_vel_rot(Particle &p, double dt) {
                   + (p.f.torque[j] / (p.p.rinertia[j] * beta)) *
                   (beta * dt * tmp_exp2 - 2. * pow(tmp_exp, 2))) / C;
         if (p.m.omega[j] != p.m.omega[j]) printf("\n ERROR bd_drag_vel_rot");
+      } else if ((thermo_switch & THERMO_EB_VELPOS) && (dt > 0.)) {
+        p.m.omega0[j] = p.m.omega[j];
+        double tmp_exp = (1. - exp(-beta * dt));
+        p.m.omega[j] = p.m.omega[j] * exp(-beta * dt) + (p.f.torque[j]
+                        / (p.p.rinertia[j] * beta)) * tmp_exp;
+        if (p.m.omega[j] != p.m.omega[j]) printf("\n ERROR 2 bd_drag_vel_rot");
       }
     }
   }
@@ -662,7 +674,11 @@ void bd_random_walk_rot(Particle &p, double dt) {
 #endif /* LANGEVIN_PER_PARTICLE */
 
   Utils::Vector3d dphi = {0.0, 0.0, 0.0};
-  Utils::Vector3d noise = v_noise_g(p.p.identity, RNGSalt::BROWNIAN);
+  //Utils::Vector3d noise = v_noise_g(p.p.identity, RNGSalt::BROWNIAN);
+  Utils::Vector3d noise = {0.0, 0.0, 0.0};
+  for (int j = 0; j < 3; j++) {
+    noise[j] = gaussian_random();
+  }
   for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
     if (!(p.p.ext_flag & COORD_FIXED(j)))
@@ -706,6 +722,16 @@ void bd_random_walk_rot(Particle &p, double dt) {
         if (dphi[j] != dphi[j]) printf("\n ERROR bd_random_walk_rot dt=%e beta=%e, brown_sigma_pos_temp_inv_local=%e, noise[j]=%e, root arg=%e",
         dt, beta, brown_sigma_pos_temp_inv_local, noise[j], (1. / beta) * (-3. +
             4. * exp(-beta * dt) - exp(-2. * beta * dt)));
+      } else if ((thermo_switch & THERMO_EB_VELPOS) && (dt > 0.)) {
+        // velocity is taken from the previous step end.
+        if (brown_sigma_pos_temp_inv_local > 0.0) {
+          dphi[j] = noise[j] * sqrt(dt - (2. / beta) * (1 - exp(-beta * dt)) / (1 + exp(-beta * dt)))
+            / brown_sigma_pos_temp_inv_local;
+        if (dphi[j] != dphi[j]) printf("\n ERROR 2 bd_random_walk_rot dt=%e beta=%e, brown_sigma_pos_temp_inv_local=%e, noise[j]=%e, root arg=%e",
+        dt, beta, brown_sigma_pos_temp_inv_local, noise[j], sqrt(dt - 2. * (1 - exp(-beta * dt)) / (1 + exp(-beta * dt))));
+        } else {
+          dphi[j] = 0.;
+        }
       }
     }
   }
@@ -754,8 +780,17 @@ void bd_random_walk_vel_rot(Particle &p, double dt) {
 #endif /* LANGEVIN_PER_PARTICLE */
 
   Utils::Vector3d domega = {0.0, 0.0, 0.0};
-  Utils::Vector3d noise = v_noise_g(p.p.identity, RNGSalt::BROWNIAN);
+  //Utils::Vector3d noise = v_noise_g(p.p.identity, RNGSalt::BROWNIAN);
+  Utils::Vector3d noise = {0.0, 0.0, 0.0};
   for (int j = 0; j < 3; j++) {
+    noise[j] = gaussian_random();
+  }
+  for (int j = 0; j < 3; j++) {
+  #ifndef PARTICLE_ANISOTROPY
+    double beta = local_gamma / p.p.rinertia[j];
+#else
+    double beta = local_gamma[j] / p.p.rinertia[j];
+#endif // PARTICLE_ANISOTROPY
 #ifdef EXTERNAL_FORCES
     if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
@@ -766,11 +801,6 @@ void bd_random_walk_vel_rot(Particle &p, double dt) {
         domega[j] = brown_sigma_vel_temp * noise[j] / sqrt(p.p.rinertia[j]);
       } else if ((thermo_switch & THERMO_ERMAK_BUCKHOLZ) && (dt > 0.)) {
         // the random terms of the (8b), Ermak1980.
-#ifndef PARTICLE_ANISOTROPY
-        double beta = local_gamma / p.p.rinertia[j];
-#else
-        double beta = local_gamma[j] / p.p.rinertia[j];
-#endif // PARTICLE_ANISOTROPY
         double tmp_exp = (1. - exp(-beta * dt));
         double tmp_exp2 = (1. - exp(-2. * beta * dt));
         double C = 2 * beta * dt - 3. + 4. * exp(-beta * dt)
@@ -779,6 +809,10 @@ void bd_random_walk_vel_rot(Particle &p, double dt) {
                     (beta * dt * tmp_exp2 - 2. * pow(tmp_exp, 2))) *
                     noise[j];
         if (domega[j] != domega[j]) printf("\n ERROR bd_random_walk_vel_rot");
+      } else if ((thermo_switch & THERMO_EB_VELPOS) && (dt > 0.)) {
+        double tmp_exp2 = (1. - exp(-2. * beta * dt));
+        domega[j] = brown_sigma_vel_temp * noise[j] * sqrt(tmp_exp2 / p.p.rinertia[j]);
+        if (domega[j] != domega[j]) printf("\n ERROR 2 bd_random_walk_vel_rot");
       }
     }
   }
