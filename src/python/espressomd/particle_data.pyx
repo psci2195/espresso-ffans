@@ -151,6 +151,8 @@ cdef class ParticleHandle:
 
         def __set__(self, _pos):
             cdef double mypos[3]
+            if np.isnan(_pos).any() or np.isinf(_pos).any():
+                raise ValueError("invalid particle position")
             check_type_or_throw_except(
                 _pos, 3, float, "Position must be 3 floats")
             for i in range(3):
@@ -160,7 +162,7 @@ cdef class ParticleHandle:
 
         def __get__(self):
             self.update_particle_data()
-            return make_array_locked(unfolded_position( < Vector3d > self.particle_data.r.p, < Vector3i > self.particle_data.l.i, box_geo.length()))
+            return make_array_locked(unfolded_position(< Vector3d > self.particle_data.r.p, < Vector3i > self.particle_data.l.i, box_geo.length()))
 
     property pos_folded:
         """
@@ -642,30 +644,41 @@ cdef class ParticleHandle:
 
                 return array_locked([mu_E[0], mu_E[1], mu_E[2]])
 
-    IF VIRTUAL_SITES:
-        property virtual:
-            """ Virtual flag.
+    property virtual:
+        """Virtual flag.
 
-            Declares the particles as virtual (1) or non-virtual (0, default).
+        Declares the particles as virtual (``True``) or non-virtual
+        (``False``, default).
 
-            virtual : :obj:`int`
+        virtual : :obj:`bool`
 
-            .. note::
-               This needs the feature ``VIRTUAL_SITES``
+        .. note::
+           This needs the feature ``VIRTUAL_SITES``
 
-            """
+        """
 
-            def __set__(self, _v):
+        def __set__(self, _v):
+            IF VIRTUAL_SITES:
                 if is_valid_type(_v, int):
-                    set_particle_virtual(self._id, _v) 
+                    set_particle_virtual(self._id, < bint > _v)
                 else:
-                    raise ValueError("virtual must be an integer >= 0.")
+                    raise ValueError("virtual must be a boolean.")
+            ELSE:
+                if _v:
+                    raise AttributeError(
+                        "To make a particle virtual, VIRTUAL_SITES has to be defined in myconfig.hpp")
 
-            def __get__(self):
+        def __get__(self):
+            # Note: the pointoer_to... mechanism doesn't work if virtual sites
+            # are not compiled in, because then, in the core, p.p.is_virtual
+            # is constexpr.
+            IF VIRTUAL_SITES:
                 self.update_particle_data()
-                cdef const int * x = NULL
+                cdef const bool * x = NULL
                 pointer_to_virtual(self.particle_data, x)
                 return x[0]
+            ELSE:
+                return False
 
     IF VIRTUAL_SITES_RELATIVE:
         property vs_quat:
@@ -904,7 +917,7 @@ cdef class ParticleHandle:
         IF PARTICLE_ANISOTROPY:
             property gamma:
                 """
-                The body-fixed frictional coefficient used in the the Langevin thermostat.
+                The body-fixed frictional coefficient used in the Langevin thermostat.
 
                 gamma : `float` or (3,) array_like of :obj:`float`
 
@@ -941,7 +954,7 @@ cdef class ParticleHandle:
         ELSE:
             property gamma:
                 """
-                The translational frictional coefficient used in the the Langevin thermostat.
+                The translational frictional coefficient used in the Langevin thermostat.
 
                 gamma : :obj:`float`
 
@@ -1232,7 +1245,7 @@ cdef class ParticleHandle:
                 swim.push_pull = 0
                 swim.dipole_length = 0.0
                 swim.rotational_friction = 0.0
- 
+
                 if type(_params) == type(True):
                     if _params:
                         raise Exception(

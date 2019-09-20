@@ -19,12 +19,13 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 /** \file
-   ELC algorithm for long range
-   Coulomb interactions. Implementation of the ELC method for the calculation of
-   the electrostatic interaction in two dimensional periodic systems. For
-    details on the method see MMM in general. The ELC method works
-    together with any three dimensional method, which in Espresso is
-    for example \ref p3m.hpp "P3M", with metallic boundary conditions.  */
+ *  \brief ELC algorithm for long-range Coulomb interactions.
+ *
+ *  Implementation of the ELC method for the calculation of the electrostatic
+ *  interaction in two dimensional periodic systems. For details on the method
+ *  see MMM in general. The ELC method works together with any three-dimensional
+ *  method, for example \ref p3m.hpp "P3M", with metallic boundary conditions.
+ */
 #ifndef _ELC_H
 #define _ELC_H
 
@@ -48,13 +49,13 @@ typedef struct {
    */
   double gap_size;
   /** @copybrief MMM2D_struct::far_calculated */
-  int far_calculated;
-  /** Flag whether the box is neutralized by an homogeneous background.
+  bool far_calculated;
+  /** Flag whether the box is neutralized by a homogeneous background.
    *  If true, use a homogeneous neutralizing background for nonneutral
    *  systems. Unlike the 3D case, this background adds an additional
    *  force pointing towards the system center, so be careful with this.
    */
-  int neutralize;
+  bool neutralize;
 
   /// @copybrief MMM2D_struct::dielectric_contrast_on
   bool dielectric_contrast_on;
@@ -64,7 +65,7 @@ typedef struct {
   /// @copybrief MMM2D_struct::delta_mid_bot
   double delta_mid_bot;
 
-  /// @copybrief MMM2D_struct::const_pot_on
+  /// @copybrief MMM2D_struct::const_pot
   bool const_pot;
   /// @copybrief MMM2D_struct::pot_diff
   double pot_diff;
@@ -103,7 +104,7 @@ extern ELC_struct elc_params;
  *  @retval ES_OK
  */
 int ELC_set_params(double maxPWerror, double min_dist, double far_cut,
-                   int neutralize, double delta_mid_top, double delta_mid_bot,
+                   bool neutralize, double delta_mid_top, double delta_mid_bot,
                    bool const_pot, double pot_diff);
 
 /// the force calculation
@@ -124,11 +125,11 @@ void ELC_init();
 void ELC_on_resort_particles();
 
 /// pairwise contributions from the lowest and top layers to the energy
-double ELC_P3M_dielectric_layers_energy_contribution(const Particle *p1,
-                                                     const Particle *p2);
+double ELC_P3M_dielectric_layers_energy_contribution(Particle const &p1,
+                                                     Particle const &p2);
 /// pairwise contributions from the lowest and top layers to the force
-void ELC_P3M_dielectric_layers_force_contribution(const Particle *p1,
-                                                  const Particle *p2,
+void ELC_P3M_dielectric_layers_force_contribution(Particle const &p1,
+                                                  Particle const &p2,
                                                   Utils::Vector3d &force1,
                                                   Utils::Vector3d &force2);
 /// self energies of top and bottom layers with their virtual images

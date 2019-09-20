@@ -29,24 +29,19 @@
 
 #include "communication.hpp"
 #include "cuda_interface.hpp"
-#include "debug.hpp"
 #include "global.hpp"
 #include "grid.hpp"
 #include "grid_based_algorithms/lb_boundaries.hpp"
 #include "grid_based_algorithms/lbgpu.hpp"
 #include "integrate.hpp"
 #include "nonbonded_interactions/nonbonded_interaction_data.hpp"
-#include "partCfg_global.hpp"
 #include "particle_data.hpp"
 #include "statistics.hpp"
 
 #include <utils/constants.hpp>
 
 #include <cmath>
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <ctime>
 #include <random>
 
 LB_particle_allocation_state lb_reinit_particles_gpu;
@@ -104,17 +99,9 @@ LB_parameters_gpu lbpar_gpu = {
 /** this is the array that stores the hydrodynamic fields for the output */
 std::vector<LB_rho_v_pi_gpu> host_values(0);
 
-static int max_ran = 1000000;
-// static double tau;
-
 /** measures the MD time since the last fluid update */
 static int fluidstep = 0;
 
-// clock_t start, end;
-int i;
-
-int n_extern_node_force_densities = 0;
-std::vector<LB_extern_nodeforcedensity_gpu> host_extern_node_force_densities;
 bool ek_initialized = false;
 
 /*-----------------------------------------------------------*/
@@ -132,15 +119,12 @@ void lattice_boltzmann_update_gpu() {
 
     fluidstep = 0;
     lb_integrate_GPU();
-    LB_TRACE(fprintf(stderr, "lb_integrate_GPU \n"));
   }
 }
 
 /** (Re-)allocation of the memory needed for the particles (CPU part) */
 void lb_realloc_particles_gpu() {
-
   lbpar_gpu.number_of_particles = n_part;
-  LB_TRACE(printf("#particles realloc\t %u \n", lbpar_gpu.number_of_particles));
 
   lb_realloc_particles_GPU_leftovers(&lbpar_gpu);
 }
@@ -154,8 +138,6 @@ void lb_reinit_fluid_gpu() {
     lb_reinit_extern_nodeforce_GPU(&lbpar_gpu);
     lbpar_gpu.reinit = 1;
   }
-
-  LB_TRACE(fprintf(stderr, "lb_reinit_fluid_gpu \n"));
 }
 
 /** (Re-)initialize the fluid. */
@@ -193,14 +175,12 @@ void lb_reinit_parameters_gpu() {
 
   if (lbpar_gpu.kT > 0.0) { /* fluctuating hydrodynamics ? */
 
-    LB_TRACE(fprintf(stderr, "fluct on \n"));
     /* Eq. (51) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007).*/
     /* Note that the modes are not normalized as in the paper here! */
     lbpar_gpu.mu = lbpar_gpu.kT * lbpar_gpu.tau * lbpar_gpu.tau /
                    D3Q19::c_sound_sq<float> /
                    (lbpar_gpu.agrid * lbpar_gpu.agrid);
   }
-  LB_TRACE(fprintf(stderr, "lb_reinit_prarameters_gpu \n"));
 
 #ifdef ELECTROKINETICS
   if (ek_initialized) {
@@ -236,8 +216,6 @@ void lb_reinit_parameters_gpu() {
   }
 #endif
 
-  LB_TRACE(fprintf(stderr, "lb_reinit_prarameters_gpu \n"));
-
   reinit_parameters_GPU(&lbpar_gpu);
 }
 
@@ -245,8 +223,6 @@ void lb_reinit_parameters_gpu() {
  *  All derived parameters and the fluid are reset to their default values.
  */
 void lb_init_gpu() {
-
-  LB_TRACE(printf("Begin initializing fluid on GPU\n"));
   /** set parameters for transfer to gpu */
   lb_reinit_parameters_gpu();
 
@@ -256,8 +232,6 @@ void lb_init_gpu() {
 
   gpu_init_particle_comm();
   cuda_bcast_global_part_params();
-
-  LB_TRACE(printf("Initializing fluid on GPU successful\n"));
 }
 
 void lb_GPU_sanity_checks() {

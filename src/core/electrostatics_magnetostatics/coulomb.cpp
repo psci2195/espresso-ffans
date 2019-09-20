@@ -8,6 +8,7 @@ double coulomb_cutoff;
 #include "communication.hpp"
 #include "electrostatics_magnetostatics/debye_hueckel.hpp"
 #include "electrostatics_magnetostatics/elc.hpp"
+#include "electrostatics_magnetostatics/icc.hpp"
 #include "electrostatics_magnetostatics/mmm1d.hpp"
 #include "electrostatics_magnetostatics/mmm2d.hpp"
 #include "electrostatics_magnetostatics/p3m.hpp"
@@ -56,7 +57,7 @@ void calc_pressure_long_range(Observable_stat &virials,
     break;
   case COULOMB_P3M: {
     p3m_charge_assign(particles);
-    virials.coulomb[1] = p3m_calc_kspace_forces(0, 1, particles);
+    virials.coulomb[1] = p3m_calc_kspace_forces(false, true, particles);
     p3m_charge_assign(particles);
     p3m_calc_kspace_stress(p_tensor.coulomb + 9);
     break;
@@ -107,11 +108,11 @@ double cutoff(const Utils::Vector3d &box_l) {
   switch (coulomb.method) {
   case COULOMB_MMM1D:
     return std::numeric_limits<double>::infinity();
+  case COULOMB_MMM2D:
+    return std::numeric_limits<double>::min();
 #ifdef P3M
   case COULOMB_ELC_P3M:
     return std::max(elc_params.space_layer, p3m.params.r_cut_iL * box_l[0]);
-  case COULOMB_MMM2D:
-    return layer_h - skin;
   case COULOMB_P3M_GPU:
   case COULOMB_P3M:
     /* do not use precalculated r_cut here, might not be set yet */
@@ -179,6 +180,11 @@ void integrate_sanity_check() {
   }
 }
 
+void update_dependent_particles() {
+  iccp3m_iteration(local_cells.particles(),
+                   cell_structure.ghost_cells().particles());
+}
+
 void on_observable_calc() {
   switch (coulomb.method) {
 #ifdef P3M
@@ -228,9 +234,6 @@ void on_resort_particles(const ParticleRange &particles) {
     ELC_on_resort_particles();
     break;
 #endif
-  case COULOMB_MMM2D:
-    MMM2D_on_resort_particles(particles);
-    break;
   default:
     break;
   }
@@ -299,7 +302,7 @@ void calc_long_range_force(const ParticleRange &particles) {
     } else
       p3m_charge_assign(particles);
 
-    p3m_calc_kspace_forces(1, 0, particles);
+    p3m_calc_kspace_forces(true, false, particles);
 
     if (elc_params.dielectric_contrast_on)
       ELC_P3M_restore_p3m_sums(particles);
@@ -311,7 +314,6 @@ void calc_long_range_force(const ParticleRange &particles) {
 #ifdef CUDA
   case COULOMB_P3M_GPU:
     if (this_node == 0) {
-      FORCE_TRACE(printf("Computing GPU P3M forces.\n"));
       p3m_gpu_add_farfield_force();
     }
     /* there is no NPT handling here as long as we cannot compute energies.g
@@ -324,10 +326,10 @@ void calc_long_range_force(const ParticleRange &particles) {
     p3m_charge_assign(particles);
 #ifdef NPT
     if (integ_switch == INTEG_METHOD_NPT_ISO)
-      nptiso.p_vir[0] += p3m_calc_kspace_forces(1, 1, particles);
+      nptiso.p_vir[0] += p3m_calc_kspace_forces(true, true, particles);
     else
 #endif
-      p3m_calc_kspace_forces(1, 0, particles);
+      p3m_calc_kspace_forces(true, false, particles);
     break;
 #endif
   case COULOMB_MMM2D:
@@ -362,16 +364,16 @@ void calc_energy_long_range(Observable_stat &energy,
     break;
   case COULOMB_P3M:
     p3m_charge_assign(particles);
-    energy.coulomb[1] = p3m_calc_kspace_forces(0, 1, particles);
+    energy.coulomb[1] = p3m_calc_kspace_forces(false, true, particles);
     break;
   case COULOMB_ELC_P3M:
     // assign the original charges first
     // they may not have been assigned yet
     p3m_charge_assign(particles);
     if (!elc_params.dielectric_contrast_on)
-      energy.coulomb[1] = p3m_calc_kspace_forces(0, 1, particles);
+      energy.coulomb[1] = p3m_calc_kspace_forces(false, true, particles);
     else {
-      energy.coulomb[1] = 0.5 * p3m_calc_kspace_forces(0, 1, particles);
+      energy.coulomb[1] = 0.5 * p3m_calc_kspace_forces(false, true, particles);
       energy.coulomb[1] +=
           0.5 * ELC_P3M_dielectric_layers_energy_self(particles);
 
@@ -379,13 +381,13 @@ void calc_energy_long_range(Observable_stat &energy,
       ELC_p3m_charge_assign_both(particles);
       ELC_P3M_modify_p3m_sums_both(particles);
 
-      energy.coulomb[1] += 0.5 * p3m_calc_kspace_forces(0, 1, particles);
+      energy.coulomb[1] += 0.5 * p3m_calc_kspace_forces(false, true, particles);
 
       // assign only the image charges now
       ELC_p3m_charge_assign_image(particles);
       ELC_P3M_modify_p3m_sums_image(particles);
 
-      energy.coulomb[1] -= 0.5 * p3m_calc_kspace_forces(0, 1, particles);
+      energy.coulomb[1] -= 0.5 * p3m_calc_kspace_forces(false, true, particles);
 
       // restore modified sums
       ELC_P3M_restore_p3m_sums(particles);

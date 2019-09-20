@@ -25,6 +25,7 @@
 #ifndef NPT_H
 #define NPT_H
 
+#include "BoxGeometry.hpp"
 /************************************************
  * data types
  ************************************************/
@@ -54,10 +55,10 @@ typedef struct {
   double p_vir[3];
   /** ideal gas components of \ref p_inst, derived from the velocities */
   double p_vel[3];
-  /** flag which indicates if \ref p_vel may (0) or may not (1) be used
+  /** flag which indicates if \ref p_vel may (false) or may not (true) be used
    *  in offline pressure calculations such as 'analyze p_inst'
    */
-  int invalidate_p_vel;
+  bool invalidate_p_vel;
   /** geometry information for the npt integrator. Holds the vector
    *  <dir, dir ,dir> where a positive value for dir indicates that
    *  box movement is allowed in that direction. To check whether a
@@ -88,4 +89,14 @@ extern nptiso_struct nptiso;
 #define NPTGEOM_YDIR 2
 #define NPTGEOM_ZDIR 4
 
+/** @brief Synchronizes npt state such as instantaneous and average pressure
+ *   @param n_steps Number of interation steps since the last sync
+ */
+void synchronize_npt_state(int n_steps);
+void npt_ensemble_init(const BoxGeometry &box);
+void integrator_npt_sanity_checks();
+void npt_update_instantaneous_pressure();
+void npt_reset_instantaneous_virials();
+void npt_add_virial_contribution(const Utils::Vector3d &force,
+                                 const Utils::Vector3d &d);
 #endif

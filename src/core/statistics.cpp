@@ -45,7 +45,6 @@
 #include <utils/contains.hpp>
 
 #include <cstdlib>
-#include <cstring>
 #include <limits>
 
 /** Previous particle configurations (needed for offline analysis and
@@ -87,28 +86,27 @@ double mindist(PartCfg &partCfg, IntList const &set1, IntList const &set2) {
   return std::sqrt(mindist2);
 }
 
-void predict_momentum_particles(double *result,
-                                const ParticleRange &particles) {
-  double momentum[3] = {0.0, 0.0, 0.0};
+Utils::Vector3d local_particle_momentum() {
+  auto const particles = local_cells.particles();
+  auto const momentum =
+      std::accumulate(particles.begin(), particles.end(), Utils::Vector3d{},
+                      [](Utils::Vector3d &m, Particle const &p) {
+                        return std::move(m) + p.p.mass * p.m.v;
+                      });
 
-  for (auto const &p : particles) {
-    auto const mass = p.p.mass;
-
-    momentum[0] += mass * (p.m.v[0] + p.f.f[0] * 0.5 * time_step / p.p.mass);
-    momentum[1] += mass * (p.m.v[1] + p.f.f[1] * 0.5 * time_step / p.p.mass);
-    momentum[2] += mass * (p.m.v[2] + p.f.f[2] * 0.5 * time_step / p.p.mass);
-  }
-
-  MPI_Reduce(momentum, result, 3, MPI_DOUBLE, MPI_SUM, 0, comm_cart);
+  return momentum;
 }
+
+REGISTER_CALLBACK_REDUCTION(local_particle_momentum,
+                            std::plus<Utils::Vector3d>())
 
 Utils::Vector3d calc_linear_momentum(int include_particles,
                                      int include_lbfluid) {
   Utils::Vector3d linear_momentum{};
   if (include_particles) {
-    Utils::Vector3d momentum_particles{};
-    mpi_gather_stats(4, momentum_particles.data(), nullptr, nullptr, nullptr);
-    linear_momentum += momentum_particles;
+    linear_momentum +=
+        mpi_call(::Communication::Result::reduction,
+                 std::plus<Utils::Vector3d>(), local_particle_momentum);
   }
   if (include_lbfluid) {
     linear_momentum += lb_lbfluid_calc_fluid_momentum();
@@ -121,34 +119,32 @@ Utils::Vector3d centerofmass(PartCfg &partCfg, int type) {
   double mass = 0.0;
 
   for (auto const &p : partCfg) {
-    if ((p.p.type == type) || (type == -1)) {
-      for (int j = 0; j < 3; j++) {
-        com[j] += p.r.p[j] * (p).p.mass;
+    if ((p.p.type == type) || (type == -1))
+      if (not p.p.is_virtual) {
+        com += p.r.p * p.p.mass;
+        mass += p.p.mass;
       }
-      mass += (p).p.mass;
-    }
   }
-  for (int j = 0; j < 3; j++)
-    com[j] /= mass;
+  com /= mass;
   return com;
 }
 
-void angularmomentum(PartCfg &partCfg, int type, double *com) {
-  com[0] = com[1] = com[2] = 0.;
+Utils::Vector3d angularmomentum(PartCfg &partCfg, int type) {
+  Utils::Vector3d am{};
 
   for (auto const &p : partCfg) {
-    if (type == p.p.type) {
-      auto const tmp = vector_product(p.r.p, p.m.v);
-      for (int i = 0; i < 3; i++) {
-        com[i] += tmp[i] * p.p.mass;
+    if ((p.p.type == type) || (type == -1))
+      if (not p.p.is_virtual) {
+        am += p.p.mass * vector_product(p.r.p, p.m.v);
       }
-    }
   }
+  return am;
 }
 
 void momentofinertiamatrix(PartCfg &partCfg, int type, double *MofImatrix) {
   int i, count;
-  double p1[3], massi;
+  double massi;
+  Utils::Vector3d p1{};
   count = 0;
 
   for (i = 0; i < 9; i++)
@@ -156,11 +152,9 @@ void momentofinertiamatrix(PartCfg &partCfg, int type, double *MofImatrix) {
 
   auto const com = centerofmass(partCfg, type);
   for (auto const &p : partCfg) {
-    if (type == p.p.type) {
+    if (type == p.p.type and (not p.p.is_virtual)) {
       count++;
-      for (i = 0; i < 3; i++) {
-        p1[i] = p.r.p[i] - com[i];
-      }
+      p1 = p.r.p - com;
       massi = p.p.mass;
       MofImatrix[0] += massi * (p1[1] * p1[1] + p1[2] * p1[2]);
       MofImatrix[4] += massi * (p1[0] * p1[0] + p1[2] * p1[2]);
@@ -272,6 +266,8 @@ void calc_part_distribution(PartCfg &partCfg, int const *p1_types, int n_p1,
       }
     }
   }
+  if (cnt == 0)
+    return;
 
   /* normalization */
   *low /= (double)cnt;
@@ -291,16 +287,16 @@ void calc_rdf(PartCfg &partCfg, int const *p1_types, int n_p1,
               int r_bins, double *rdf) {
   long int cnt = 0;
   int i, t1, t2, ind;
-  int mixed_flag = 0;
+  bool mixed_flag = false;
   double inv_bin_width = 0.0, bin_width = 0.0;
   double volume, bin_volume, r_in, r_out;
 
   if (n_p1 == n_p2) {
     for (i = 0; i < n_p1; i++)
       if (p1_types[i] != p2_types[i])
-        mixed_flag = 1;
+        mixed_flag = true;
   } else
-    mixed_flag = 1;
+    mixed_flag = true;
 
   bin_width = (r_max - r_min) / (double)r_bins;
   inv_bin_width = 1.0 / bin_width;
@@ -311,7 +307,7 @@ void calc_rdf(PartCfg &partCfg, int const *p1_types, int n_p1,
     for (t1 = 0; t1 < n_p1; t1++) {
       if (it->p.type == p1_types[t1]) {
         /* distinguish mixed and identical rdf's */
-        auto jt = (mixed_flag == 1) ? partCfg.begin() : std::next(it);
+        auto jt = mixed_flag ? partCfg.begin() : std::next(it);
 
         /* particle loop: p2_types*/
         for (; jt != partCfg.end(); ++jt) {
@@ -329,6 +325,8 @@ void calc_rdf(PartCfg &partCfg, int const *p1_types, int n_p1,
       }
     }
   }
+  if (cnt == 0)
+    return;
 
   /* normalization */
   volume = box_geo.length()[0] * box_geo.length()[1] * box_geo.length()[2];
@@ -353,7 +351,7 @@ void calc_rdf_av(PartCfg &partCfg, int const *p1_types, int n_p1,
                  int r_bins, double *rdf, int n_conf) {
   long int cnt = 0;
   int cnt_conf = 1;
-  int mixed_flag = 0;
+  bool mixed_flag = false;
   double inv_bin_width = 0.0, bin_width = 0.0;
   double volume, bin_volume, r_in, r_out;
   double *rdf_tmp;
@@ -363,9 +361,9 @@ void calc_rdf_av(PartCfg &partCfg, int const *p1_types, int n_p1,
   if (n_p1 == n_p2) {
     for (int i = 0; i < n_p1; i++)
       if (p1_types[i] != p2_types[i])
-        mixed_flag = 1;
+        mixed_flag = true;
   } else
-    mixed_flag = 1;
+    mixed_flag = true;
 
   bin_width = (r_max - r_min) / (double)r_bins;
   inv_bin_width = 1.0 / bin_width;
@@ -383,8 +381,8 @@ void calc_rdf_av(PartCfg &partCfg, int const *p1_types, int n_p1,
       for (int t1 = 0; t1 < n_p1; t1++) {
         if (it->p.type == p1_types[t1]) {
           /* distinguish mixed and identical rdf's */
-          auto jt = (mixed_flag == 1) ? partCfg.begin() : std::next(it);
-          int j = (mixed_flag == 1) ? 0 : i + 1;
+          auto jt = mixed_flag ? partCfg.begin() : std::next(it);
+          int j = mixed_flag ? 0 : i + 1;
 
           // particle loop: p2_types
           for (; jt != partCfg.end(); ++jt) {

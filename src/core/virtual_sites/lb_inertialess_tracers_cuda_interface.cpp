@@ -27,7 +27,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifdef VIRTUAL_SITES_INERTIALESS_TRACERS
 
 #include "communication.hpp"
-#include "debug.hpp"
 #include "grid.hpp"
 #include "integrate.hpp"
 #include "particle_data.hpp"
@@ -78,8 +77,6 @@ void IBM_cuda_mpi_get_particles(ParticleRange particles) {
   auto const n_part = particles.size();
 
   if (this_node > 0) {
-    COMM_TRACE(fprintf(stderr, "%d: get_particles_slave, %d particles\n",
-                       this_node, n_part));
     static std::vector<IBM_CUDA_ParticleDataInput> buffer;
     buffer.resize(n_part);
     /* pack local parts into buffer */
@@ -92,8 +89,6 @@ void IBM_cuda_mpi_get_particles(ParticleRange particles) {
 
     Utils::Mpi::gather_buffer(IBM_ParticleDataInput_host, n_part, comm_cart);
   }
-
-  COMM_TRACE(fprintf(stderr, "%d: finished get\n", this_node));
 }
 
 /*****************
