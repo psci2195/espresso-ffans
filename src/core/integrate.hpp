@@ -30,6 +30,7 @@
 #define INTEG_METHOD_NPT_ISO 0
 #define INTEG_METHOD_NVT 1
 #define INTEG_METHOD_STEEPEST_DESCENT 2
+#define INTEG_METHOD_GRONBECH_J_FARAGO 3
 
 /************************************************************/
 /** \name Exported Variables */
@@ -115,6 +116,7 @@ void integrate_vv(int n_steps, int reuse_forces);
 int python_integrate(int n_steps, bool recalc_forces, bool reuse_forces);
 
 void integrate_set_nvt();
+void integrate_set_gronbech_j_farago();
 int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
                                 int ydir, int zdir, bool cubic_box);
 

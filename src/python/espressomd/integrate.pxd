@@ -28,6 +28,7 @@ cdef extern from "config.hpp":
 cdef extern from "integrate.hpp" nogil:
     cdef int python_integrate(int n_steps, cbool recalc_forces, int reuse_forces)
     cdef void integrate_set_nvt()
+    cdef void integrate_set_gronbech_j_farago()
     cdef extern cbool skin_set
 
 IF NPT:

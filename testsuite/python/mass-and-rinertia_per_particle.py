@@ -241,7 +241,7 @@ class ThermoTest(ut.TestCase):
 
         """
 
-        tol = 1.2E-3
+        tol = 1.25E-3
         for step in range(100):
             self.system.integrator.run(2)
             for i in range(n):
@@ -509,6 +509,23 @@ class ThermoTest(ut.TestCase):
         self.set_particle_specific_temperature(n)
         # Actual integration and validation run
         self.check_dissipation(n)
+    
+    # Test case 3.0.1: both particle specific gamma and temperature /
+    # dissipation only / GronbechJensen-Farago integrator
+    def test_case_301(self):
+        # Each of 2 kind of particles will be represented by n instances:
+        n = 1
+        self.dissipation_param_setup(n)
+        self.set_langevin_global_defaults()
+        # The test case-specific thermostat and per-particle parameters
+        self.system.thermostat.set_langevin(
+            kT=self.kT, gamma=self.gamma_global, seed=42)
+        self.set_particle_specific_gamma(n)
+        self.set_particle_specific_temperature(n)
+        self.system.integrator.set_gronbech_j_farago()
+        # Actual integration and validation run
+        self.check_dissipation(n)
+        self.system.integrator.set_nvt()
 
     # Test case 3.1: both particle specific gamma and temperature /
     # fluctuation & dissipation
@@ -525,6 +542,24 @@ class ThermoTest(ut.TestCase):
         self.set_diffusivity_tran()
         # Actual integration and validation run
         self.check_fluctuation_dissipation(n)
+
+    # Test case 3.1.1: both particle specific gamma and temperature /
+    # fluctuation & dissipation / GronbechJensen-Farago integrator
+    def test_case_311(self):
+        # Each of 2 kind of particles will be represented by n instances:
+        n = 500
+        self.fluctuation_dissipation_param_setup(n)
+        self.set_langevin_global_defaults()
+        # The test case-specific thermostat and per-particle parameters
+        self.system.thermostat.set_langevin(
+            kT=self.kT, gamma=self.gamma_global, seed=42)
+        self.set_particle_specific_gamma(n)
+        self.set_particle_specific_temperature(n)
+        self.set_diffusivity_tran()
+        # Actual integration and validation run
+        self.system.integrator.set_gronbech_j_farago()
+        self.check_fluctuation_dissipation(n)
+        self.system.integrator.set_nvt()
 
     # Test case 4.0: no particle specific values / rotational specific global
     # thermostat / dissipation only

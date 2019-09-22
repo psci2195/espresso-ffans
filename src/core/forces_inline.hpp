@@ -80,7 +80,7 @@
 inline ParticleForce init_ghost_force(Particle const &) { return {}; }
 
 /** Initialize the forces for a real particle */
-inline ParticleForce init_local_particle_force(Particle const &part) {
+inline ParticleForce init_local_particle_force(Particle &part) {
   auto f = (thermo_switch & THERMO_LANGEVIN) ? friction_thermo_langevin(part)
                                              : ParticleForce{};
 

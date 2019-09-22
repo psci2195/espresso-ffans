@@ -269,6 +269,13 @@ struct ParticleMomentum {
   /** velocity. */
   Utils::Vector3d v = {0., 0., 0.};
 
+#ifdef GRONBECH_JENSEN_FARAGO
+  // not a velocity.. but this structure has been used
+  Utils::Vector3d noise_saved = {-1., -1., -1.};
+  // for the VV Step 1 storage
+  Utils::Vector3d noise_saved_0 = {-1., -1., -1.};
+#endif // GRONBECH_JENSEN_FARAGO
+
 #ifdef ROTATION
   /** angular velocity
       ALWAYS IN PARTICLE FIXED, I.E., CO-ROTATING COORDINATE SYSTEM */

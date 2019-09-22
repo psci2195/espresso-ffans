@@ -178,23 +178,21 @@ inline Utils::Vector3d v_noise(int particle_id) {
          Utils::Vector3d::broadcast(0.5);
 }
 
-/** Langevin thermostat core function.
-    Collects the particle velocity (different for ENGINE, PARTICLE_ANISOTROPY).
-    Collects the langevin parameters kt, gamma (different for
-    LANGEVIN_PER_PARTICLE). Applies the noise and friction term.
+/** Langevin thermostat frictional and thermal prefixes
+ *  determination based on its per-particle vs global parameters.
+ *  The de facto particle anisotropy is also verified here
+ *  according to the prefixes symmetry.
 */
-inline Utils::Vector3d friction_thermo_langevin(Particle const &p) {
-  // Early exit for virtual particles without thermostat
-  if (p.p.is_virtual && !thermo_virtual) {
-    return {};
-  }
-
-  // Determine prefactors for the friction (pref1) and the noise (pref2) term
+inline void friction_thermo_langevin_pref(const Particle &p,
+                 Thermostat::GammaType &langevin_pref_friction_buf,
+                 Thermostat::GammaType &langevin_pref_noise_buf,
+                 bool &aniso_flag) {
+// Determine prefactors for the friction (pref1) and the noise (pref2) term
   extern Thermostat::GammaType langevin_pref1;
   extern Thermostat::GammaType langevin_pref2;
   // first, set defaults
-  Thermostat::GammaType langevin_pref_friction_buf = langevin_pref1;
-  Thermostat::GammaType langevin_pref_noise_buf = langevin_pref2;
+  langevin_pref_friction_buf = langevin_pref1;
+  langevin_pref_noise_buf = langevin_pref2;
   // Override defaults if per-particle values for T and gamma are given
 #ifdef LANGEVIN_PER_PARTICLE
   auto const constexpr langevin_temp_coeff = 24.0;
@@ -222,49 +220,28 @@ inline Utils::Vector3d friction_thermo_langevin(Particle const &p) {
   }
 #endif /* LANGEVIN_PER_PARTICLE */
 
-  // Get velocity effective in the thermostatting
-#ifdef ENGINE
-  auto const velocity = (p.swim.v_swim != 0)
-                            ? p.m.v - p.swim.v_swim * p.r.calc_director()
-                            : p.m.v;
-#else
-  auto const &velocity = p.m.v;
-#endif
 #ifdef PARTICLE_ANISOTROPY
   // Particle frictional isotropy check
-  auto const aniso_flag =
+  aniso_flag =
       (langevin_pref_friction_buf[0] != langevin_pref_friction_buf[1]) ||
       (langevin_pref_friction_buf[1] != langevin_pref_friction_buf[2]) ||
       (langevin_pref_noise_buf[0] != langevin_pref_noise_buf[1]) ||
       (langevin_pref_noise_buf[1] != langevin_pref_noise_buf[2]);
-
-  // In case of anisotropic particle: body-fixed reference frame. Otherwise:
-  // lab-fixed reference frame.
-  auto const friction = aniso_flag ? [&]() {
-    auto const A = rotation_matrix(p.r.quat);
-
-    return transpose(A) *
-    hadamard_product(langevin_pref_friction_buf, A * velocity);
-  }()  : hadamard_product(langevin_pref_friction_buf, velocity);
-
-  return friction +
-         hadamard_product(langevin_pref_noise_buf, v_noise(p.p.identity));
-#else
-  // Do the actual (isotropic) thermostatting
-  return langevin_pref_friction_buf * velocity +
-         langevin_pref_noise_buf * v_noise(p.p.identity);
 #endif // PARTICLE_ANISOTROPY
 }
 
 #ifdef ROTATION
-/** set the particle torques to the friction term, i.e. \f$\tau_i=-\gamma w_i +
-   \xi_i\f$.
-    The same friction coefficient \f$\gamma\f$ is used as that for translation.
+/** Langevin thermostat (rotational) frictional and thermal prefixes
+ *  determination based on its per-particle vs global parameters.
+ *  The de facto particle anisotropy is also verified here
+ *  according to the prefixes symmetry.
 */
-inline void friction_thermo_langevin_rotation(Particle &p) {
+inline void friction_thermo_langevin_pref_rot(const Particle &p,
+                 Thermostat::GammaType &langevin_pref_friction_buf,
+                 Thermostat::GammaType &langevin_pref_noise_buf) {
+  // Determine prefactors for the friction (pref1) and the noise (pref2) term
   extern Thermostat::GammaType langevin_pref2_rotation;
-  Thermostat::GammaType langevin_pref_friction_buf, langevin_pref_noise_buf;
-
+  // Override defaults if per-particle values for T and gamma are given
   langevin_pref_friction_buf = langevin_gamma_rotation;
   langevin_pref_noise_buf = langevin_pref2_rotation;
 
@@ -296,6 +273,68 @@ inline void friction_thermo_langevin_rotation(Particle &p) {
       langevin_pref_noise_buf = langevin_pref2_rotation;
   }
 #endif /* LANGEVIN_PER_PARTICLE */
+}
+#endif // ROTATION
+
+/** Langevin thermostat core function.
+    Collects the particle velocity (different for ENGINE, PARTICLE_ANISOTROPY).
+    Collects the langevin parameters kt, gamma (different for
+    LANGEVIN_PER_PARTICLE). Applies the noise and friction term.
+*/
+inline Utils::Vector3d friction_thermo_langevin(Particle &p) {
+  // Early exit for virtual particles without thermostat
+  if (p.p.is_virtual && !thermo_virtual) {
+    return {};
+  }
+  Utils::Vector3d v_noise_buf;
+  Thermostat::GammaType langevin_pref_friction_buf;
+  Thermostat::GammaType langevin_pref_noise_buf;
+  bool aniso_flag = false;
+  friction_thermo_langevin_pref(p,
+                langevin_pref_friction_buf,
+                langevin_pref_noise_buf,
+                aniso_flag);
+  // Get velocity effective in the thermostatting
+#ifdef ENGINE
+  auto const velocity = (p.swim.v_swim != 0)
+                            ? p.m.v - p.swim.v_swim * p.r.calc_director()
+                            : p.m.v;
+#else
+  auto const &velocity = p.m.v;
+#endif
+  v_noise_buf = v_noise(p.p.identity);
+#ifdef GRONBECH_JENSEN_FARAGO
+    p.m.noise_saved = v_noise_buf;
+#endif // GRONBECH_JENSEN_FARAGO
+#ifdef PARTICLE_ANISOTROPY
+  // In case of anisotropic particle: body-fixed reference frame. Otherwise:
+  // lab-fixed reference frame.
+  auto const friction = aniso_flag ? [&]() {
+    auto const A = rotation_matrix(p.r.quat);
+
+    return transpose(A) *
+    hadamard_product(langevin_pref_friction_buf, A * velocity);
+  }()  : hadamard_product(langevin_pref_friction_buf, velocity);
+
+  return friction +
+         hadamard_product(langevin_pref_noise_buf, v_noise_buf);
+#else
+  // Do the actual (isotropic) thermostatting
+  return langevin_pref_friction_buf * velocity +
+         langevin_pref_noise_buf * v_noise_buf;
+#endif // PARTICLE_ANISOTROPY
+}
+
+#ifdef ROTATION
+/** set the particle torques to the friction term, i.e. \f$\tau_i=-\gamma w_i +
+   \xi_i\f$.
+    The same friction coefficient \f$\gamma\f$ is used as that for translation.
+*/
+inline void friction_thermo_langevin_rotation(Particle &p) {
+  Thermostat::GammaType langevin_pref_friction_buf, langevin_pref_noise_buf;
+
+  friction_thermo_langevin_pref_rot(p, langevin_pref_friction_buf,
+                                      langevin_pref_noise_buf);
 
   // Rotational degrees of virtual sites are thermostatted,
   // so no switching here

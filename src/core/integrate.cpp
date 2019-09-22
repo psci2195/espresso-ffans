@@ -128,6 +128,9 @@ bool integrator_step_1(ParticleRange &particles) {
     if (steepest_descent_step(particles))
       return true; // early exit
     break;
+  case INTEG_METHOD_GRONBECH_J_FARAGO:
+    velocity_verlet_step_1(particles);
+    break;
   case INTEG_METHOD_NVT:
     velocity_verlet_step_1(particles);
     break;
@@ -147,6 +150,9 @@ void integrator_step_2(ParticleRange &particles) {
   switch (integ_switch) {
   case INTEG_METHOD_STEEPEST_DESCENT:
     // Nothgin
+    break;
+  case INTEG_METHOD_GRONBECH_J_FARAGO:
+    velocity_verlet_step_2(particles);
     break;
   case INTEG_METHOD_NVT:
     velocity_verlet_step_2(particles);
@@ -400,6 +406,11 @@ int python_integrate(int n_steps, bool recalc_forces, bool reuse_forces_par) {
 
 void integrate_set_nvt() {
   integ_switch = INTEG_METHOD_NVT;
+  mpi_bcast_parameter(FIELD_INTEG_SWITCH);
+}
+
+void integrate_set_gronbech_j_farago() {
+  integ_switch = INTEG_METHOD_GRONBECH_J_FARAGO;
   mpi_bcast_parameter(FIELD_INTEG_SWITCH);
 }
 

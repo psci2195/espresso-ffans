@@ -223,6 +223,50 @@ class LangevinThermostat(ut.TestCase):
             self.check_velocity_distribution(
                 omega_stored, v_minmax, bins, error_tol, kT)
 
+    def test_04_1__global_langevin(self):
+        """Test for global Langevin parameters for the GronbechJensen-Farago integrator."""
+        N = 200
+        system = self.system
+        system.part.clear()
+        system.time_step = 0.06
+
+        # Place particles
+        system.part.add(pos=np.random.random((N, 3)))
+
+        # Enable rotation if compiled in
+        if espressomd.has_features("ROTATION"):
+            system.part[:].rotation = [1, 1, 1]
+
+        kT = 1.1
+        gamma = 3.5
+        system.thermostat.set_langevin(kT=kT, gamma=gamma, seed=41)
+        
+        self.system.integrator.set_gronbech_j_farago()
+
+        # Warmup
+        system.integrator.run(20)
+
+        # Sampling
+        loops = 150
+        v_stored = np.zeros((N * loops, 3))
+        omega_stored = np.zeros((N * loops, 3))
+        for i in range(loops):
+            system.integrator.run(1)
+            v_stored[i * N:(i + 1) * N,:] = system.part[:].v
+            if espressomd.has_features("ROTATION"):
+                omega_stored[i * N:(i + 1) * N,:] = system.part[:].omega_body
+
+        v_minmax = 5
+        bins = 4
+        error_tol = 0.01
+        self.check_velocity_distribution(
+            v_stored, v_minmax, bins, error_tol, kT)
+        if espressomd.has_features("ROTATION"):
+            self.check_velocity_distribution(
+                omega_stored, v_minmax, bins, error_tol, kT)
+        
+        self.system.integrator.set_nvt()
+
     @utx.skipIfMissingFeatures("LANGEVIN_PER_PARTICLE")
     def test_05__langevin_per_particle(self):
         """Test for Langevin particle. Covers all combinations of
@@ -436,6 +480,155 @@ class LangevinThermostat(ut.TestCase):
                 self.verify_diffusion(p_both, corr_omega,
                                       per_part_kT, eff_per_part_gamma_rot)
 
+    def test_06_1__diffusion(self):
+        """This tests rotational and translational diffusion coeff via Green-Kubo
+            for the GronbechJensen-Farago integrator"""
+        system = self.system
+        system.part.clear()
+
+        kT = 1.37
+        dt = 0.1
+        system.time_step = dt
+
+        # Translational gamma. We cannot test per-component, if rotation is on,
+        # because body and space frames become different.
+        gamma = 3.1
+
+        # Rotational gamma
+        gamma_rot_i = 4.7
+        gamma_rot_a = [4.2, 1, 1.2]
+
+        # If we have langevin per particle:
+        # per particle kT
+        per_part_kT = 1.6
+        # Translation
+        per_part_gamma = 1.63
+        # Rotational
+        per_part_gamma_rot_i = 2.6
+        per_part_gamma_rot_a = [2.4, 3.8, 1.1]
+
+        # Particle with global thermostat params
+        p_global = system.part.add(pos=(0, 0, 0))
+        # Make sure, mass doesn't change diff coeff
+        self.setup_diff_mass_rinertia(p_global)
+
+        # particle specific gamma, kT, and both
+        if espressomd.has_features("LANGEVIN_PER_PARTICLE"):
+            p_gamma = system.part.add(pos=(0, 0, 0))
+            self.setup_diff_mass_rinertia(p_gamma)
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                p_gamma.gamma = per_part_gamma, per_part_gamma, per_part_gamma
+                if espressomd.has_features("ROTATION"):
+                    p_gamma.gamma_rot = per_part_gamma_rot_a
+            else:
+                p_gamma.gamma = per_part_gamma
+                if espressomd.has_features("ROTATION"):
+                    p_gamma.gamma_rot = per_part_gamma_rot_i
+
+            p_kT = system.part.add(pos=(0, 0, 0))
+            self.setup_diff_mass_rinertia(p_kT)
+            p_kT.temp = per_part_kT
+
+            p_both = system.part.add(pos=(0, 0, 0))
+            self.setup_diff_mass_rinertia(p_both)
+            p_both.temp = per_part_kT
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                p_both.gamma = per_part_gamma, per_part_gamma, per_part_gamma
+                if espressomd.has_features("ROTATION"):
+                    p_both.gamma_rot = per_part_gamma_rot_a
+            else:
+                p_both.gamma = per_part_gamma
+                if espressomd.has_features("ROTATION"):
+                    p_both.gamma_rot = per_part_gamma_rot_i
+
+        # Thermostat setup
+        if espressomd.has_features("ROTATION"):
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                # particle anisotropy and rotation
+                system.thermostat.set_langevin(
+                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_a, seed=41)
+            else:
+                # Rotation without particle anisotropy
+                system.thermostat.set_langevin(
+                    kT=kT, gamma=gamma, gamma_rotation=gamma_rot_i, seed=41)
+        else:
+            # No rotation
+            system.thermostat.set_langevin(kT=kT, gamma=gamma, seed=41)
+
+        self.system.integrator.set_gronbech_j_farago()
+
+        system.cell_system.skin = 0.4
+        system.integrator.run(100)
+
+        # Correlators
+        vel_obs = {}
+        omega_obs = {}
+        corr_vel = {}
+        corr_omega = {}
+        all_particles = [p_global]
+        if espressomd.has_features("LANGEVIN_PER_PARTICLE"):
+            all_particles.append(p_gamma)
+            all_particles.append(p_kT)
+            all_particles.append(p_both)
+
+        # linear vel
+        vel_obs = ParticleVelocities(ids=system.part[:].id)
+        corr_vel = Correlator(
+            obs1=vel_obs, tau_lin=10, tau_max=1.4, delta_N=2,
+            corr_operation="componentwise_product", compress1="discard1")
+        system.auto_update_accumulators.add(corr_vel)
+        # angular vel
+        if espressomd.has_features("ROTATION"):
+            omega_obs = ParticleBodyAngularVelocities(ids=system.part[:].id)
+            corr_omega = Correlator(
+                obs1=omega_obs, tau_lin=10, tau_max=1.5, delta_N=2,
+                corr_operation="componentwise_product", compress1="discard1")
+            system.auto_update_accumulators.add(corr_omega)
+
+        system.integrator.run(80000)
+
+        system.auto_update_accumulators.remove(corr_vel)
+        corr_vel.finalize()
+        if espressomd.has_features("ROTATION"):
+            system.auto_update_accumulators.remove(corr_omega)
+            corr_omega.finalize()
+
+        # Verify diffusion
+        # Translation
+        # Cast gammas to vector, to make checks independent of
+        # PARTICLE_ANISOTROPY
+        gamma = np.ones(3) * gamma
+        per_part_gamma = np.ones(3) * per_part_gamma
+        self.verify_diffusion(p_global, corr_vel, kT, gamma)
+        if espressomd.has_features("LANGEVIN_PER_PARTICLE"):
+            self.verify_diffusion(p_gamma, corr_vel, kT, per_part_gamma)
+            self.verify_diffusion(p_kT, corr_vel, per_part_kT, gamma)
+            self.verify_diffusion(p_both, corr_vel, per_part_kT, per_part_gamma)
+
+        # Rotation
+        if espressomd.has_features("ROTATION"):
+            # Decide on effective gamma rotation, since for rotation it is
+            # direction dependent
+            eff_gamma_rot = None
+            per_part_eff_gamma_rot = None
+            if espressomd.has_features("PARTICLE_ANISOTROPY"):
+                eff_gamma_rot = gamma_rot_a
+                eff_per_part_gamma_rot = per_part_gamma_rot_a
+            else:
+                eff_gamma_rot = gamma_rot_i * np.ones(3)
+                eff_per_part_gamma_rot = per_part_gamma_rot_i * np.ones(3)
+
+            self.verify_diffusion(p_global, corr_omega, kT, eff_gamma_rot)
+            if espressomd.has_features("LANGEVIN_PER_PARTICLE"):
+                self.verify_diffusion(
+                    p_gamma, corr_omega, kT, eff_per_part_gamma_rot)
+                self.verify_diffusion(
+                    p_kT, corr_omega, per_part_kT, eff_gamma_rot)
+                self.verify_diffusion(p_both, corr_omega,
+                                      per_part_kT, eff_per_part_gamma_rot)
+
+        self.system.integrator.set_nvt()
+
     def verify_diffusion(self, p, corr, kT, gamma):
         """Verify diffusion coeff.
 
@@ -453,7 +646,7 @@ class LangevinThermostat(ut.TestCase):
         for coord in [1, 2, 3]:
             I = np.trapz(acf[:, coord], acf[:, 0])
             ratio = I / (kT / gamma[coord - 1])
-            self.assertAlmostEqual(ratio, 1., delta=0.07)
+            self.assertAlmostEqual(ratio, 1., delta=0.15)
 
     @utx.skipIfMissingFeatures("VIRTUAL_SITES")
     def test_07__virtual(self):
