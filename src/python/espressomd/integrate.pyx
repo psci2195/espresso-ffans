@@ -54,6 +54,8 @@ cdef class Integrator:
             self.set_nvt()
         elif self._method == "GJF":
             self.set_gronbech_j_farago()
+        elif self._method == "BAOAB":
+            self.set_baoab()
         elif self._method == "NPT":
             npt_params = state['_isotropic_npt_params']
             self.set_isotropic_npt(npt_params['ext_pressure'], npt_params[
@@ -73,7 +75,8 @@ cdef class Integrator:
             Reuse the forces from previous time step.
 
         """
-        if self._method == "VV" or self._method == "NVT" or self._method == "GJF" or self._method == "NPT":
+        if self._method == "VV" or self._method == "NVT" or \
+            self._method == "GJF" or self._method == "NPT" or self._method == "BAOAB":
             check_type_or_throw_except(
                 steps, 1, int, "Integrate requires a positive integer for the number of steps")
             check_type_or_throw_except(
@@ -137,6 +140,14 @@ cdef class Integrator:
         """
         self._method = "GJF"
         integrate_set_gronbech_j_farago()
+
+    def set_baoab(self):
+        """
+        Set the integration method to BAOAB integrator.
+
+        """
+        self._method = "BAOAB"
+        integrate_set_baoab()
 
     def set_isotropic_npt(self, ext_pressure, piston, direction=[0, 0, 0],
                           cubic_box=False):

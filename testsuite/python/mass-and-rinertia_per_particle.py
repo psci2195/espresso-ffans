@@ -527,6 +527,23 @@ class ThermoTest(ut.TestCase):
         self.check_dissipation(n)
         self.system.integrator.set_nvt()
 
+    # Test case 3.0.2: both particle specific gamma and temperature /
+    # dissipation only / BAOAB integrator
+    def test_case_302(self):
+        # Each of 2 kind of particles will be represented by n instances:
+        n = 1
+        self.dissipation_param_setup(n)
+        self.set_langevin_global_defaults()
+        # The test case-specific thermostat and per-particle parameters
+        self.system.thermostat.set_langevin(
+            kT=self.kT, gamma=self.gamma_global, seed=42)
+        self.set_particle_specific_gamma(n)
+        self.set_particle_specific_temperature(n)
+        self.system.integrator.set_baoab()
+        # Actual integration and validation run
+        self.check_dissipation(n)
+        self.system.integrator.set_nvt()
+
     # Test case 3.1: both particle specific gamma and temperature /
     # fluctuation & dissipation
     def test_case_31(self):
@@ -558,6 +575,24 @@ class ThermoTest(ut.TestCase):
         self.set_diffusivity_tran()
         # Actual integration and validation run
         self.system.integrator.set_gronbech_j_farago()
+        self.check_fluctuation_dissipation(n)
+        self.system.integrator.set_nvt()
+    
+    # Test case 3.1.2: both particle specific gamma and temperature /
+    # fluctuation & dissipation / BAOAB integrator
+    def test_case_312(self):
+        # Each of 2 kind of particles will be represented by n instances:
+        n = 500
+        self.fluctuation_dissipation_param_setup(n)
+        self.set_langevin_global_defaults()
+        # The test case-specific thermostat and per-particle parameters
+        self.system.thermostat.set_langevin(
+            kT=self.kT, gamma=self.gamma_global, seed=42)
+        self.set_particle_specific_gamma(n)
+        self.set_particle_specific_temperature(n)
+        self.set_diffusivity_tran()
+        # Actual integration and validation run
+        self.system.integrator.set_baoab()
         self.check_fluctuation_dissipation(n)
         self.system.integrator.set_nvt()
 

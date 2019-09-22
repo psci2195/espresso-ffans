@@ -5,6 +5,7 @@
 #include "config.hpp"
 #include "particle_data.hpp"
 #include "rotation.hpp"
+#include <math.h>
 
 /** Propagate the velocities and positions. Integration steps before force
  *  calculation of the Velocity Verlet integrator: <br> \f[ v(t+0.5 \Delta t) =
@@ -25,64 +26,119 @@ inline void velocity_verlet_propagate_vel_pos(ParticleRange &particles) {
       continue;
 #endif
 
-#ifdef GRONBECH_JENSEN_FARAGO
+#if defined(GRONBECH_JENSEN_FARAGO) || defined(BAOAB)
     // the lab system for sure:
     Utils::Vector3d v_0_buf;
     Utils::Vector3d p_0_buf;
-    if (integ_switch == INTEG_METHOD_GRONBECH_J_FARAGO) {
+    if ((integ_switch == INTEG_METHOD_GRONBECH_J_FARAGO) ||
+         (integ_switch == INTEG_METHOD_BAOAB)) {
       // save initial conditions
       v_0_buf = p.m.v;
       p_0_buf = p.r.p;
     }
-#endif // GRONBECH_JENSEN_FARAGO
+#endif // GRONBECH_JENSEN_FARAGO or BAOAB
 
     for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
       if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
       {
-        /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
-        p.m.v[j] += 0.5 * time_step * p.f.f[j] / p.p.mass;
-        /* Propagate positions (only NVT): p(t + dt)   = p(t) + dt *
-         * v(t+0.5*dt) */
-        p.r.p[j] += time_step * p.m.v[j];
+        if (integ_switch != INTEG_METHOD_BAOAB) {
+          /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
+          p.m.v[j] += 0.5 * time_step * p.f.f[j] / p.p.mass;
+          /* Propagate positions (only NVT): p(t + dt)   = p(t) + dt *
+           * v(t+0.5*dt) */
+          p.r.p[j] += time_step * p.m.v[j];
+        } else {
+          // INTEG_METHOD_BAOAB
+          /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
+          p.m.v[j] += 0.5 * time_step * p.f.f[j] / p.p.mass;
+          /* Propagate positions (only NVT): p(t + 0.5 * dt)   = p(t) + dt *
+           * v(t+0.5*dt) */
+          p.r.p[j] += 0.5 * time_step * p.m.v[j];
+        }
       }
     }
 
-#ifdef GRONBECH_JENSEN_FARAGO
+#if defined(GRONBECH_JENSEN_FARAGO) || defined(BAOAB)
     //Utils::Vector3d f_0_buf;
-    if (integ_switch == INTEG_METHOD_GRONBECH_J_FARAGO) {
-      Thermostat::GammaType langevin_pref_friction_buf;
-      Thermostat::GammaType langevin_pref_noise_buf;
-      bool aniso_flag;
-      aniso_flag = false;
-      friction_thermo_langevin_pref(p, langevin_pref_friction_buf,
-                                    langevin_pref_noise_buf, aniso_flag);
-      // possible body system of references:
-      Utils::Vector3d velocity_buf;
-      Utils::Vector3d position_buf;
-      Utils::Vector3d velocity_0_buf;
-      Utils::Vector3d position_0_buf;
+    Thermostat::GammaType langevin_pref_friction_buf;
+    Thermostat::GammaType langevin_pref_noise_buf;
+    bool aniso_flag;
+    aniso_flag = false;
+    friction_thermo_langevin_pref(p, langevin_pref_friction_buf,
+                                  langevin_pref_noise_buf, aniso_flag);
+    // possible body system of references:
+    Utils::Vector3d velocity_buf;
+    Utils::Vector3d position_buf;
+    Utils::Vector3d velocity_0_buf;
+    Utils::Vector3d position_0_buf;
+    Utils::Vector3d noise_body_buf;
 
-      p.m.noise_saved_0 = p.m.noise_saved;
-      //f_0_buf = p.f.f;
+    // save for the future
+    p.m.noise_saved_0 = p.m.noise_saved;
+    //f_0_buf = p.f.f;
 #ifdef PARTICLE_ANISOTROPY
-      if (aniso_flag) {
-        velocity_buf = convert_vector_space_to_body(p, p.m.v);
-        position_buf = convert_vector_space_to_body(p, p.r.p);
-        velocity_0_buf = convert_vector_space_to_body(p, v_0_buf);
-        position_0_buf = convert_vector_space_to_body(p, p_0_buf);
-        //f_0_buf = convert_vector_space_to_body(p, p.f.f);
-      } else
+    if (aniso_flag) {
+      velocity_buf = convert_vector_space_to_body(p, p.m.v);
+      position_buf = convert_vector_space_to_body(p, p.r.p);
+      velocity_0_buf = convert_vector_space_to_body(p, v_0_buf);
+      position_0_buf = convert_vector_space_to_body(p, p_0_buf);
+      noise_body_buf = convert_vector_space_to_body(p, p.m.noise_saved);
+      //f_0_buf = convert_vector_space_to_body(p, p.f.f);
+    } else
 #endif // PARTICLE_ANISOTROPY
-      {
-        // the vectors are set within the space system by default
-        velocity_buf = p.m.v;
-        position_buf = p.r.p;
-        velocity_0_buf = v_0_buf;
-        position_0_buf = p_0_buf;
+    {
+      // the vectors are set within the space system by default
+      velocity_buf = p.m.v;
+      position_buf = p.r.p;
+      velocity_0_buf = v_0_buf;
+      position_0_buf = p_0_buf;
+      noise_body_buf = p.m.noise_saved;
+    }
+#endif // GRONBECH_JENSEN_FARAGO or BAOAB
+
+#ifdef BAOAB
+    if (integ_switch == INTEG_METHOD_BAOAB) {
+      Utils::Vector3d noise = {0.0, 0.0, 0.0};
+      for (int j = 0; j < 3; j++) {
+        noise[j] = gaussian_random();
+      }
+      for (int j = 0; j < 3; j++) {
+#ifdef EXTERNAL_FORCES
+        if (!(p.p.ext_flag & COORD_FIXED(j)))
+#endif
+        {
+          // get rid of the redundant fluctuation-dissipation part of the velocity
+          // from the simple VV code part:
+          velocity_buf[j] -= 0.5 * time_step * (langevin_pref_friction_buf[j] *
+                              velocity_0_buf[j] +
+                              langevin_pref_noise_buf[j] * noise_body_buf[j]) / p.p.mass; 
+          position_buf[j] -= 0.25 * time_step_squared * (langevin_pref_friction_buf[j] *
+                              velocity_0_buf[j] +
+                              langevin_pref_noise_buf[j] * noise_body_buf[j]) / p.p.mass;
+          // now, the fluctuation-dissipation according to BAOAB
+          double beta = - langevin_pref_friction_buf[j] / p.p.mass;
+          velocity_buf[j] = velocity_buf[j] * exp(- beta * time_step) +
+                            noise[j] * langevin_pref_noise_buf[j] *
+                            sqrt(time_step / (- 24. * p.p.mass * langevin_pref_friction_buf[j])) *
+                            sqrt(1. - exp(- 2. * beta * time_step));
+        }
       }
 
+    // transform the phase space coord. back to the lab system if needed
+    if (aniso_flag) {
+        p.m.v = convert_vector_body_to_space(p, velocity_buf);
+        p.r.p = convert_vector_body_to_space(p, position_buf);
+      } else {
+        p.m.v = velocity_buf;
+        p.r.p = position_buf;
+      }
+    }
+#endif // BAOAB
+
+#ifdef GRONBECH_JENSEN_FARAGO
+    if (integ_switch == INTEG_METHOD_GRONBECH_J_FARAGO) {
       for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
         if (!(p.p.ext_flag & COORD_FIXED(j)))
@@ -136,21 +192,24 @@ velocity_verlet_propagate_vel_final(const ParticleRange &particles) {
       continue;
 #endif
 
-#ifdef GRONBECH_JENSEN_FARAGO
+#if defined(GRONBECH_JENSEN_FARAGO) || defined(BAOAB)
     // the lab system for sure:
     Utils::Vector3d v_0_buf;
     Utils::Vector3d noise_0_buf;
-    if (integ_switch == INTEG_METHOD_GRONBECH_J_FARAGO) {
-      // save initial conditions (for this step!)
-      v_0_buf = p.m.v;
-      noise_0_buf = p.m.noise_saved;
-    }
-#endif // GRONBECH_JENSEN_FARAGO
+    // save initial conditions (for this step!)
+    v_0_buf = p.m.v;
+    noise_0_buf = p.m.noise_saved;
+#endif // GRONBECH_JENSEN_FARAGO / BAOAB
 
     for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
       if (!(p.p.ext_flag & COORD_FIXED(j))) {
 #endif
+        if (integ_switch == INTEG_METHOD_BAOAB) {
+          /* Propagate positions (only NVT): p(t + dt) = p(t + 0.5 * dt)
+           + 0.5 * dt * v'(t+0.5*dt) */
+          p.r.p[j] += 0.5 * time_step * p.m.v[j];
+        }
         /* Propagate velocity: v(t+dt) = v(t+0.5*dt) + 0.5*dt * a(t+dt) */
         p.m.v[j] += 0.5 * time_step * p.f.f[j] / p.p.mass;
 #ifdef EXTERNAL_FORCES
@@ -158,39 +217,70 @@ velocity_verlet_propagate_vel_final(const ParticleRange &particles) {
 #endif
     }
 
-#ifdef GRONBECH_JENSEN_FARAGO
+#if defined(GRONBECH_JENSEN_FARAGO) || defined(BAOAB)
     //Utils::Vector3d f_0_buf;
-    if (integ_switch == INTEG_METHOD_GRONBECH_J_FARAGO) {
-      Thermostat::GammaType langevin_pref_friction_buf;
-      Thermostat::GammaType langevin_pref_noise_buf;
-      bool aniso_flag;
-      aniso_flag = false;
-      friction_thermo_langevin_pref(p, langevin_pref_friction_buf,
-                                    langevin_pref_noise_buf, aniso_flag);
-      // possible body system of references:
-      Utils::Vector3d velocity_buf;
-      Utils::Vector3d velocity_0_buf;
-      Utils::Vector3d noise_0_body_buf;
-      Utils::Vector3d noise_body_buf;
-      //f_0_buf = p.f.f;
+    Thermostat::GammaType langevin_pref_friction_buf;
+    Thermostat::GammaType langevin_pref_noise_buf;
+    bool aniso_flag;
+    aniso_flag = false;
+    friction_thermo_langevin_pref(p, langevin_pref_friction_buf,
+                                  langevin_pref_noise_buf, aniso_flag);
+    // possible body system of references:
+    Utils::Vector3d velocity_buf;
+    Utils::Vector3d position_buf;
+    Utils::Vector3d velocity_0_buf;
+    Utils::Vector3d noise_0_body_buf;
+    Utils::Vector3d noise_body_buf;
+    //f_0_buf = p.f.f;
 #ifdef PARTICLE_ANISOTROPY
-      if (aniso_flag) {
-        velocity_buf = convert_vector_space_to_body(p, p.m.v);
-        velocity_0_buf = convert_vector_space_to_body(p, v_0_buf);
-        noise_body_buf = convert_vector_space_to_body(p, p.m.noise_saved);
-        // the noise stored from the Step 1 of the VV:
-        noise_0_body_buf = convert_vector_space_to_body(p, p.m.noise_saved_0);
-        //f_0_buf = convert_vector_space_to_body(p, p.f.f);
-      } else
+    if (aniso_flag) {
+      velocity_buf = convert_vector_space_to_body(p, p.m.v);
+      velocity_0_buf = convert_vector_space_to_body(p, v_0_buf);
+      position_buf = convert_vector_space_to_body(p, p.r.p);
+      noise_body_buf = convert_vector_space_to_body(p, p.m.noise_saved);
+      // the noise stored from the Step 1 of the VV:
+      noise_0_body_buf = convert_vector_space_to_body(p, p.m.noise_saved_0);
+      //f_0_buf = convert_vector_space_to_body(p, p.f.f);
+    } else
 #endif // PARTICLE_ANISOTROPY
-      {
-        // the vectors are set within the space system by default
-        velocity_buf = p.m.v;
-        velocity_0_buf = v_0_buf;
-        noise_body_buf = p.m.noise_saved;
-        noise_0_body_buf = p.m.noise_saved_0;
+    {
+      // the vectors are set within the space system by default
+      velocity_buf = p.m.v;
+      velocity_0_buf = v_0_buf;
+      position_buf = p.r.p;
+      noise_body_buf = p.m.noise_saved;
+      noise_0_body_buf = p.m.noise_saved_0;
+    }
+#endif // GRONBECH_JENSEN_FARAGO / BAOAB
+
+#ifdef BAOAB
+    if (integ_switch == INTEG_METHOD_BAOAB) {
+      for (int j = 0; j < 3; j++) {
+#ifdef EXTERNAL_FORCES
+        if (!(p.p.ext_flag & COORD_FIXED(j)))
+#endif
+        {
+          // get rid of the redundant fluctuation-dissipation part of the velocity
+          // from the simple VV code part:
+          velocity_buf[j] -= 0.5 * time_step * (langevin_pref_friction_buf[j] *
+                              velocity_0_buf[j] +
+                              langevin_pref_noise_buf[j] * noise_body_buf[j]) / p.p.mass; 
+        }
       }
 
+    // transform the phase space coord. back to the lab system if needed
+    if (aniso_flag) {
+        p.m.v = convert_vector_body_to_space(p, velocity_buf);
+        //p.r.p = convert_vector_body_to_space(p, position_buf);
+      } else {
+        p.m.v = velocity_buf;
+        //p.r.p = position_buf;
+      }
+    }
+#endif // BAOAB
+
+#ifdef GRONBECH_JENSEN_FARAGO
+    if (integ_switch == INTEG_METHOD_GRONBECH_J_FARAGO) {
       for (int j = 0; j < 3; j++) {
 #ifdef EXTERNAL_FORCES
         if (!(p.p.ext_flag & COORD_FIXED(j)))

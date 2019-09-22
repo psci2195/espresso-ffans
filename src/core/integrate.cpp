@@ -131,6 +131,9 @@ bool integrator_step_1(ParticleRange &particles) {
   case INTEG_METHOD_GRONBECH_J_FARAGO:
     velocity_verlet_step_1(particles);
     break;
+  case INTEG_METHOD_BAOAB:
+    velocity_verlet_step_1(particles);
+    break;
   case INTEG_METHOD_NVT:
     velocity_verlet_step_1(particles);
     break;
@@ -150,6 +153,9 @@ void integrator_step_2(ParticleRange &particles) {
   switch (integ_switch) {
   case INTEG_METHOD_STEEPEST_DESCENT:
     // Nothgin
+    break;
+  case INTEG_METHOD_BAOAB:
+    velocity_verlet_step_2(particles);
     break;
   case INTEG_METHOD_GRONBECH_J_FARAGO:
     velocity_verlet_step_2(particles);
@@ -411,6 +417,11 @@ void integrate_set_nvt() {
 
 void integrate_set_gronbech_j_farago() {
   integ_switch = INTEG_METHOD_GRONBECH_J_FARAGO;
+  mpi_bcast_parameter(FIELD_INTEG_SWITCH);
+}
+
+void integrate_set_baoab() {
+  integ_switch = INTEG_METHOD_BAOAB;
   mpi_bcast_parameter(FIELD_INTEG_SWITCH);
 }
 

@@ -303,9 +303,9 @@ inline Utils::Vector3d friction_thermo_langevin(Particle &p) {
   auto const &velocity = p.m.v;
 #endif
   v_noise_buf = v_noise(p.p.identity);
-#ifdef GRONBECH_JENSEN_FARAGO
+#if defined(GRONBECH_JENSEN_FARAGO) || defined(BAOAB)
     p.m.noise_saved = v_noise_buf;
-#endif // GRONBECH_JENSEN_FARAGO
+#endif // GRONBECH_JENSEN_FARAGO or BAOAB
 #ifdef PARTICLE_ANISOTROPY
   // In case of anisotropic particle: body-fixed reference frame. Otherwise:
   // lab-fixed reference frame.

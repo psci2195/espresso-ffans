@@ -38,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NPT
 
 #define GRONBECH_JENSEN_FARAGO
+#define BAOAB
 
 #define DPD
 #define METADYNAMICS
