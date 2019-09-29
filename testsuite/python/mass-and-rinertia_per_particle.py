@@ -434,6 +434,96 @@ class ThermoTest(ut.TestCase):
                         self.assertLess(abs(cos_alpha - cos_alpha_test), tol)
                         self.assertEqual(sgn, sgn_test)
 
+    # Note: the decelleration test is needed for the Langevin thermostat only. Brownian thermostat is defined
+    # over a larger time-step by its concept.
+    def check_dissipation_viscous_drag_acceleration(self, n):
+        """
+        Check the dissipation relations: the drag terminal velocity tests,
+        aka the drift in case of the electrostatics
+
+        Parameters
+        ----------
+        n : :obj:`int`
+            Number of particles of the each type. There are 2 types.
+
+        """
+        system = self.system
+        f = np.zeros((2 * n, 3))
+        tor = np.zeros((2 * n, 3))
+        dip = np.zeros((2 * n, 3))
+        tmp_axis = np.zeros((2 * n, 3))
+        tol = 7.5E-3
+        if "EXTERNAL_FORCES" in espressomd.features():
+            for k in range(2):
+                for i in range(n):
+                    ind = i + k * n
+                    # Just some random forces
+                    f[ind,:] = uniform(-0.5, 500., 3)
+                    system.part[ind].ext_force = f[ind,:]
+                    if "ROTATION" in espressomd.features():
+                        # Just some random torques
+                        tor[ind,:] = uniform(-0.5, 500., 3)
+                        system.part[ind].ext_torque = tor[ind,:]
+                        # Let's set the dipole perpendicular to the torque
+                        if "DIPOLES" in espressomd.features():
+                            # 2 types of particles correspond to 2 different
+                            # perpendicular vectors
+                            if ind % 2 == 0:
+                                dip[ind,:] = 0.0, tor[ind, 2], -tor[ind, 1]
+                            else:
+                                dip[ind,:] = -tor[ind, 2], 0.0, tor[ind, 0]
+                            system.part[ind].dip = dip[ind,:]
+                            # 3rd dynamic axis
+                            tmp_axis[ind,:] = np.cross(tor[ind,:], dip[ind,:]) \
+                                / (np.linalg.norm(tor[ind]) * np.linalg.norm(dip[ind]))
+            # Small number of steps is enough for the terminal velocity within the BD by its definition.
+            # A simulation of the original saturation of the velocity.
+            #system.integrator.run(2)
+            system.time = 0.0
+            for i in range(n):
+                for k in range(2):
+                    ind = i + k * n
+                    system.part[ind].pos = np.zeros((3))
+                    if "DIPOLES" in espressomd.features():
+                        system.part[ind].dip = dip[ind,:]
+            for step in range(1000):
+                # Small number of steps
+                system.integrator.run(2)
+                for k in range(2):
+                    ind = i + k * n
+                    for j in range(3):
+                        # Eq. (14.34) T. Schlick, https://doi.org/10.1007/978-1-4419-6351-2 (2010)
+                        # First (deterministic) term of the eq. (14.34) of Schlick2010 taking into account eq. (14.35).
+                        beta = self.gamma_tran_p_validate[k, j] / system.part[ind].mass
+                        self.assertLess(
+                            abs(system.part[ind].v[j] - f[ind, j] / \
+                                self.gamma_tran_p_validate[k, j] * (1. - math.exp(- beta * system.time))), tol)
+                        # Second (deterministic) term of the Eq. (14.39) of Schlick2010.
+                        self.assertLess(
+                            abs(system.part[ind].pos[j] - \
+                                f[ind, j] / self.gamma_tran_p_validate[k, j] * \
+                                (system.time - (1 / beta * (1. - math.exp(- beta * system.time))))), tol)
+                        # Same, a rotational analogy.
+                        if "ROTATION" in espressomd.features() and "LANGEVIN_IMPULSE" not in espressomd.features():
+                            self.assertLess(abs(
+                                system.part[ind].omega_lab[j] - tor[ind, j] \
+                                    / self.gamma_rot_p_validate[k, j]), tol)
+                    if "ROTATION" in espressomd.features() and "DIPOLES" in espressomd.features() and "LANGEVIN_IMPULSE" not in espressomd.features():
+                        # Same, a rotational analogy. One is implemented using a simple linear algebra;
+                        # the polar angles with a sign control just for a correct inverse trigonometric functions application.
+                        cos_alpha = np.dot(dip[ind,:], system.part[ind].dip[:]) / \
+                            (np.linalg.norm(dip[ind,:]) * system.part[ind].dipm)
+                        # Isoptropic particle for the BD. Single gamma equals to other components
+                        cos_alpha_test = np.cos(system.time * np.linalg.norm(tor[ind,:]) / \
+                            self.gamma_rot_p_validate[k, 0])
+                        # The sign instead of sin calc additionally (equivalent approach)
+                        sgn = np.sign(np.dot(system.part[ind].dip[:], tmp_axis[ind,:]))
+                        sgn_test = np.sign(np.sin(system.time * np.linalg.norm(tor[ind,:]) / \
+                            self.gamma_rot_p_validate[k, 0]))
+
+                        self.assertLess(abs(cos_alpha - cos_alpha_test), tol)
+                        self.assertEqual(sgn, sgn_test)
+
     def check_fluctuation_dissipation(self, n, therm_steps, loops):
         """
         Check the fluctuation-dissipation relations: thermalization
@@ -1039,6 +1129,7 @@ class ThermoTest(ut.TestCase):
             # Each of 2 kind of particles will be represented by n instances:
             n = 1
             self.dissipation_viscous_drag_setup_bd()
+            self.system.time_step = 0.007
             self.set_langevin_global_defaults()
             # The test case-specific thermostat and per-particle parameters
             system.thermostat.set_langevin_impulse(
@@ -1046,7 +1137,8 @@ class ThermoTest(ut.TestCase):
             self.set_particle_specific_gamma(n)
             self.set_particle_specific_temperature(n)
             # Actual integration and validation run
-            self.check_dissipation_viscous_drag(n)
+            #self.check_dissipation_viscous_drag(n)
+            self.check_dissipation_viscous_drag_acceleration(n)
 
     # Test case 3.1: both particle specific gamma and temperature /
     # fluctuation & dissipation / LD and BD/EB
