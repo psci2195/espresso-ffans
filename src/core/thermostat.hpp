@@ -55,6 +55,7 @@
 #define THERMO_ERMAK_BUCKHOLZ 32
 // Velocity->Position EB correlation
 #define THERMO_EB_VELPOS 64
+#define THERMO_LANGEVIN_IMPULSE 128
 /*@}*/
 
 namespace Thermostat {

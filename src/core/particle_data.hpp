@@ -281,6 +281,15 @@ struct ParticleForce {
   /** torque */
   Utils::Vector3d torque = {0., 0., 0.};
 #endif
+
+#ifdef LANGEVIN_IMPULSE
+  // saved noise from the previous step
+  Utils::Vector3d noise_saved = {NAN, NAN, NAN};
+  // previous force
+  Utils::Vector3d f_saved = {NAN, NAN, NAN};
+  // previous element from the Cholesky decomposition
+  Utils::Vector3d alpha_saved = {NAN, NAN, NAN};
+#endif // LANGEVIN_IMPULSE
 };
 
 /** Momentum information on a particle. Information not contained in

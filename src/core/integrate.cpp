@@ -118,11 +118,11 @@ void propagate_pos();
     of the Velocity Verlet integrator: <br>
     \f[ v(t+0.5 \Delta t) = v(t) + 0.5 \Delta t f(t)/m \f] <br>
     \f[ p(t+\Delta t) = p(t) + \Delta t  v(t+0.5 \Delta t) \f] */
-void propagate_vel_pos();
+void propagate_vel_pos(bool start_flag, bool end_flag);
 /** Integration step 4 of the Velocity Verletintegrator and finalize
     instantaneous pressure calculation:<br>
     \f[ v(t+\Delta t) = v(t+0.5 \Delta t) + 0.5 \Delta t f(t+\Delta t)/m \f] */
-void propagate_vel_finalize_p_inst();
+void propagate_vel_finalize_p_inst(bool end_flag);
 
 /** Integrator stability check (see compile flag ADDITIONAL_CHECKS). */
 void force_and_velocity_display();
@@ -133,7 +133,7 @@ void finalize_p_inst_npt();
 /** Propagate position: translational random walk part.*/
 void bd_random_walk(Particle &p, double dt);
 /** Propagate velocities: all the translations.*/
-void bd_vel_steps_tran(Particle &p, double dt);
+void bd_vel_steps_tran(Particle &p, double dt, bool start_flag = false, bool end_flag = false);
 /** Propagate velocities: all the rotations.*/
 void bd_vel_steps_rot(Particle &p, double dt);
 /** Propagate positions: all the translations.*/
@@ -309,7 +309,12 @@ void integrate_vv(int n_steps, int reuse_forces) {
       if (steepest_descent_step())
         break;
     } else {
-      propagate_vel_pos();
+      bool start_flag = false, end_flag = false;
+      if (step == 0) {
+        start_flag = true;
+      }
+      // note, that the end_flag will be used not here but the later below
+      propagate_vel_pos(start_flag, end_flag);
 
       /* Propagate time: t = t+dt */
       sim_time += time_step;
@@ -359,7 +364,11 @@ void integrate_vv(int n_steps, int reuse_forces) {
     /* Integration Step: Step 4 of Velocity Verlet scheme:
        v(t+dt) = v(t+0.5*dt) + 0.5*dt * f(t+dt) */
     if (integ_switch != INTEG_METHOD_STEEPEST_DESCENT) {
-      propagate_vel_finalize_p_inst();
+      bool end_flag = false;
+      if (step == n_steps - 1) {
+        end_flag = true;
+      }
+      propagate_vel_finalize_p_inst(end_flag);
 #ifdef ROTATION
       convert_torques_propagate_omega();
 #endif
@@ -446,7 +455,7 @@ void integrate_vv(int n_steps, int reuse_forces) {
 /* Private functions */
 /************************************************************/
 
-void propagate_vel_finalize_p_inst() {
+void propagate_vel_finalize_p_inst(bool end_flag) {
 #ifdef NPT
   if (integ_switch == INTEG_METHOD_NPT_ISO) {
     nptiso.p_vel[0] = nptiso.p_vel[1] = nptiso.p_vel[2] = 0.0;
@@ -473,6 +482,13 @@ void propagate_vel_finalize_p_inst() {
                 | THERMO_EB_VELPOS)) {
       bd_drag_vel(p, 0.0);
       bd_random_walk_vel(p, 0.0);
+    } else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (end_flag)) {
+      // NOTE! No need to have the last velocity half leap for THERMO_LANGEVIN_IMPULSE
+      // We keep it v_{n-1/2} before it will jump to v_{n+1/2}.
+      // This will be needed only for very last step.
+      // The full time step here is provided just to align the LI method formulae properly.
+      bd_drag_vel(p, time_step, false, end_flag);
+      bd_random_walk_vel(p, time_step, false, end_flag);
     }
 #endif // BROWNIAN_DYNAMICS
     for (int j = 0; j < 3; j++) {
@@ -490,7 +506,7 @@ void propagate_vel_finalize_p_inst() {
         {
 #ifdef BROWNIAN_DYNAMICS
           if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-                | THERMO_EB_VELPOS)))
+                | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)))
 #endif // BROWNIAN_DYNAMICS
           {
             /* Propagate velocity: v(t+dt) = v(t+0.5*dt) + 0.5*dt * a(t+dt) */
@@ -766,7 +782,7 @@ void propagate_pos() {
   }
 }
 
-void propagate_vel_pos() {
+void propagate_vel_pos(bool start_flag, bool end_flag) {
   INTEG_TRACE(fprintf(stderr, "%d: propagate_vel_pos:\n", this_node));
 
 #ifdef ADDITIONAL_CHECKS
@@ -814,6 +830,8 @@ void propagate_vel_pos() {
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
       // means no changes in the original velocity.
       bd_vel_steps_tran(p, 0.0);
+    } else if (thermo_switch & THERMO_LANGEVIN_IMPULSE) {
+      bd_vel_steps_tran(p, time_step, start_flag, end_flag);
     }
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_pos_steps_tran(p, time_step);
@@ -822,6 +840,8 @@ void propagate_vel_pos() {
       bd_vel_steps_tran(p, time_step);
     } else if (thermo_switch & THERMO_EB_VELPOS) {
       bd_vel_steps_tran(p, time_step);
+      bd_pos_steps_tran(p, time_step);
+    } else if (thermo_switch & THERMO_LANGEVIN_IMPULSE) {
       bd_pos_steps_tran(p, time_step);
     }
 #endif // BROWNIAN_DYNAMICS
@@ -832,7 +852,7 @@ void propagate_vel_pos() {
       {
 #ifdef BROWNIAN_DYNAMICS
         if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-            | THERMO_EB_VELPOS)))
+            | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
@@ -1040,11 +1060,11 @@ int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
-void bd_vel_steps_tran(Particle &p, double dt) {
+void bd_vel_steps_tran(Particle &p, double dt, bool start_flag, bool end_flag) {
   if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-      | THERMO_EB_VELPOS)) {
-    bd_drag_vel(p, dt);
-    bd_random_walk_vel(p, dt);
+      | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)) {
+    bd_drag_vel(p, dt, start_flag, end_flag);
+    bd_random_walk_vel(p, dt, start_flag, end_flag);
   }
 }
 /** Propagate the velocities: all the rotations.*/
@@ -1072,7 +1092,7 @@ void bd_vel_steps_rot(Particle &p, double dt) {
  */
 void bd_pos_steps_tran(Particle &p, double dt) {
   if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-      | THERMO_EB_VELPOS)) {
+      | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)) {
     bd_drag(p, dt);
     bd_random_walk(p, dt);
   }
@@ -1240,7 +1260,9 @@ void bd_random_walk(Particle &p, double dt) {
     if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
     {
-      p.r.p[j] += aniso_flag ? delta_pos_lab[j] : delta_pos_body[j];
+      if (!(thermo_switch & THERMO_LANGEVIN_IMPULSE)) {
+        p.r.p[j] += aniso_flag ? delta_pos_lab[j] : delta_pos_body[j];
+      }
     }
   }
 }

@@ -103,7 +103,8 @@ void mpi_bcast_langevin_rng_counter(const uint64_t counter) {
 }
 
 void langevin_rng_counter_increment() {
-  if (thermo_switch & (THERMO_LANGEVIN | THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ))
+  if (thermo_switch & (THERMO_LANGEVIN | THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+                        | THERMO_ERMAK_BUCKHOLZ))
     langevin_rng_counter->increment();
 }
 
@@ -263,6 +264,14 @@ void thermo_init_ermak_buckholz() {
 }
 #endif // ERMAK_BUCKHOLZ
 
+#ifdef LANGEVIN_IMPULSE
+void thermo_init_langevin_impulse() {
+  // the LI thermostat relies on the similar architecture
+  // as the BD one. Any futures improvements can be added on top here.
+  thermo_init_brownian();
+}
+#endif
+
 void thermo_init() {
 
   // Init thermalized bond despite of thermostat
@@ -291,6 +300,10 @@ void thermo_init() {
   if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS))
     thermo_init_ermak_buckholz();
 #endif
+#ifdef LANGEVIN_IMPULSE
+  if (thermo_switch & THERMO_LANGEVIN_IMPULSE)
+    thermo_init_langevin_impulse();
+#endif // LANGEVIN_IMPULSE
 }
 
 void langevin_heat_up() {

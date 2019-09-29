@@ -224,7 +224,7 @@ void propagate_omega_quat_particle(Particle *p) {
   if (!p->p.rotation)
     return;
 #ifdef BROWNIAN_DYNAMICS
-  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS))
+  if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE))
     return;
 #endif // BROWNIAN_DYNAMICS
 
@@ -341,7 +341,7 @@ void convert_torques_propagate_omega() {
     if (thermo_switch & THERMO_BROWNIAN) {
       bd_drag_vel_rot(p, 0.5 * time_step);
       bd_random_walk_vel_rot(p, 0.5 * time_step);
-    } else if (!(thermo_switch & (THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS))) //{
+    } else if (!(thermo_switch & (THERMO_ERMAK_BUCKHOLZ | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE))) //{
       //bd_drag_vel_rot(p, 0.0);
       //bd_random_walk_vel_rot(p, 0.0);
     //} else

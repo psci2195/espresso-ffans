@@ -364,7 +364,7 @@ class ThermoTest(ut.TestCase):
         tor = np.zeros((2 * n, 3))
         dip = np.zeros((2 * n, 3))
         tmp_axis = np.zeros((2 * n, 3))
-        tol = 1E-10
+        tol = 5E-5
         if "EXTERNAL_FORCES" in espressomd.features():
             for k in range(2):
                 for i in range(n):
@@ -414,11 +414,11 @@ class ThermoTest(ut.TestCase):
                             abs(system.part[ind].pos[j] - \
                                 system.time * f[ind, j] / self.gamma_tran_p_validate[k, j]), tol)
                         # Same, a rotational analogy.
-                        if "ROTATION" in espressomd.features():
+                        if "ROTATION" in espressomd.features() and "LANGEVIN_IMPULSE" not in espressomd.features():
                             self.assertLess(abs(
                                 system.part[ind].omega_lab[j] - tor[ind, j] \
                                     / self.gamma_rot_p_validate[k, j]), tol)
-                    if "ROTATION" in espressomd.features() and "DIPOLES" in espressomd.features():
+                    if "ROTATION" in espressomd.features() and "DIPOLES" in espressomd.features() and "LANGEVIN_IMPULSE" not in espressomd.features():
                         # Same, a rotational analogy. One is implemented using a simple linear algebra;
                         # the polar angles with a sign control just for a correct inverse trigonometric functions application.
                         cos_alpha = np.dot(dip[ind,:], system.part[ind].dip[:]) / \
@@ -526,7 +526,7 @@ class ThermoTest(ut.TestCase):
                 tolerance,
                 msg='Relative deviation in translational energy too large: {0}'.format(
                     dv[k]))
-            if "ROTATION" in espressomd.features():
+            if "ROTATION" in espressomd.features() and "LANGEVIN_IMPULSE" not in espressomd.features():
                 self.assertLessEqual(
                     abs(
                         do[k]),
@@ -1031,6 +1031,23 @@ class ThermoTest(ut.TestCase):
             # Actual integration and validation run
             self.check_dissipation_viscous_drag(n)
 
+    # Test case 3.0.4: both particle specific gamma and temperature /
+    # dissipation viscous drag only / LI only
+    if "LANGEVIN_IMPULSE" in espressomd.features():
+        def test_case_304(self):
+            system = self.system
+            # Each of 2 kind of particles will be represented by n instances:
+            n = 1
+            self.dissipation_viscous_drag_setup_bd()
+            self.set_langevin_global_defaults()
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.set_langevin_impulse(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            self.set_particle_specific_gamma(n)
+            self.set_particle_specific_temperature(n)
+            # Actual integration and validation run
+            self.check_dissipation_viscous_drag(n)
+
     # Test case 3.1: both particle specific gamma and temperature /
     # fluctuation & dissipation / LD and BD/EB
     def test_case_31(self):
@@ -1079,6 +1096,17 @@ class ThermoTest(ut.TestCase):
             # The test case-specific thermostat
             system.thermostat.turn_off()
             system.thermostat.set_eb_opt2(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_fluctuation_dissipation(n, therm_steps, loops)
+        if "LANGEVIN_IMPULSE" in espressomd.features():
+            self.set_initial_cond()
+            system.time_step = 10.0
+            loops = 8
+            therm_steps = 2
+            # The test case-specific thermostat
+            system.thermostat.turn_off()
+            system.thermostat.set_langevin_impulse(
                 kT=self.kT, gamma=self.gamma_global, seed=42)
             # Actual integration and validation run
             self.check_fluctuation_dissipation(n, therm_steps, loops)

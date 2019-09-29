@@ -67,7 +67,10 @@ inline void bd_drag(Particle &p, double dt) {
       // Only a conservative part of the force is used here
       // for EB:
       // same terms belong to the eq. (8a), Ermak1980
-      p.r.p[j] += p.f.f[j] * dt / (p.p.mass * beta);
+      if (!(thermo_switch & THERMO_LANGEVIN_IMPULSE)) {
+        // for all BD-like thermostats except LI
+        p.r.p[j] += p.f.f[j] * dt / (p.p.mass * beta);
+      }
       // the remaining deterministic terms of the eq. (8a), Ermak1980.
       if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
         double tmp_exp = (1. - exp(-beta * dt)) / beta;
@@ -77,6 +80,10 @@ inline void bd_drag(Particle &p, double dt) {
         p.r.p[j] += (1 / beta) * (p.m.v[j] + p.m.v0[j]
                     - 2.0 * p.f.f[j] / (p.p.mass * beta)) *
                     (1 - exp(-beta * dt)) / (1 + exp(-beta * dt));
+      } else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (dt > 0.)) {
+        double exp0;
+        exp0 = exp(- beta * dt / 2.);
+        p.r.p[j] += (1. - exp0 * exp0) * p.m.v[j] / (beta * exp0);
       }
     }
   }
@@ -91,7 +98,7 @@ inline void bd_drag(Particle &p, double dt) {
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
-inline void bd_drag_vel(Particle &p, double dt) {
+inline void bd_drag_vel(Particle &p, double dt, bool start_flag = false, bool end_flag = false) {
   // The friction tensor Z from the eq. (14.31) of Schlick2010:
   Thermostat::GammaType local_gamma;
 
@@ -136,6 +143,24 @@ inline void bd_drag_vel(Particle &p, double dt) {
         p.m.v0[j] = p.m.v[j];
         double tmp_exp = (1. - exp(-beta * dt));
         p.m.v[j] = p.m.v[j] * exp(-beta * dt) + (p.f.f[j] / (p.p.mass * beta)) * tmp_exp;
+      }  else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (dt > 0.)) {
+        double exp0 = exp(- beta * dt);
+        double wplus = (exp0 - 1. + beta * dt) / (beta * dt * (1. - exp0));
+        double wminus = 1. - wplus;
+        double S = 0.; // just to show a consistency with vGB82
+        if ((! start_flag) && (! end_flag)) {
+          p.m.v[j] = exp(- beta * dt / 2.) * (exp(- beta * dt / 2.) *
+                      p.m.v[j] + dt * p.f.f[j] / p.p.mass +
+                      dt * S * (p.f.f[j] - p.f.f_saved[j]) / p.p.mass);
+        } else if (start_flag) {
+          p.m.v[j] = exp(- beta * dt / 2.) * (p.m.v[j] +
+                      dt * wplus * p.f.f[j] / p.p.mass);
+        } else if (end_flag) {
+          p.m.v[j] = exp(- beta * dt / 2.) * p.m.v[j] +
+                      dt * p.f.f[j] * wminus / p.p.mass +
+                      dt * S * (p.f.f[j] - p.f.f_saved[j]) / p.p.mass;
+        }
+        p.f.f_saved[j] = p.f.f[j];
       } // else dt==0: is not needed, the original velocity is kept
     }
   }
@@ -151,7 +176,7 @@ inline void bd_drag_vel(Particle &p, double dt) {
  * @param &p              Reference to the particle (Input)
  * @param dt              Time interval (Input)
  */
-inline void bd_random_walk_vel(Particle &p, double dt) {
+inline void bd_random_walk_vel(Particle &p, double dt, bool start_flag = false, bool end_flag = false) {
   // skip the translation thermalizing for virtual sites unless enabled
   extern bool thermo_virtual;
   if (p.p.is_virtual && !thermo_virtual)
@@ -218,6 +243,30 @@ inline void bd_random_walk_vel(Particle &p, double dt) {
       } else if ((thermo_switch & THERMO_EB_VELPOS) && (dt > 0.)) {
         double tmp_exp2 = (1. - exp(-2. * beta * dt));
         p.m.v[j] += brown_sigma_vel_temp * noise[j] * sqrt(tmp_exp2 / p.p.mass);
+      } else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (dt > 0.)) {
+        double R, alpha, betacorr, a, b, c, pref, wplus, wminus, exp0;
+        exp0 = exp(- beta * dt);
+        pref = pow(brown_sigma_vel_temp, 2) / p.p.mass;
+        wplus = (exp0 - 1. + beta * dt) / (beta * dt * (1. - exp0));
+        wminus = 1. - wplus;
+        a = pref * (2 * pow(wplus, 2) * beta * dt + wplus - wminus);
+        b = pref * (2 * wplus * wminus * beta * dt + wminus - wplus);
+        c = pref * (2 * pow(wminus, 2) * beta * dt + wplus - wminus);
+        betacorr = b / (p.f.alpha_saved[j] + 1E-12);
+        if ((! start_flag) && (! end_flag)) {
+          alpha = sqrt(a + c - betacorr * betacorr + 1E-12);
+          p.f.alpha_saved[j] = alpha; // for use in the next time step
+          R = sqrt(exp0) * (betacorr * p.f.noise_saved[j] + alpha * noise[j]);
+        } else if (start_flag) {
+          alpha = sqrt(a + 1E-12);
+          p.f.alpha_saved[j] = alpha; // for use in the next time step
+          R = alpha * sqrt(exp0) * noise[j];
+        } else if (end_flag) {
+          alpha = sqrt(c - betacorr * betacorr + 1E-12);
+          R = betacorr * p.f.noise_saved[j] + alpha * noise[j];
+        }
+        p.f.noise_saved[j] = noise[j]; // for use in the next time step
+        p.m.v[j] += R;
       }
     }
   }
