@@ -1140,6 +1140,25 @@ class ThermoTest(ut.TestCase):
             #self.check_dissipation_viscous_drag(n)
             self.check_dissipation_viscous_drag_acceleration(n)
 
+    # Test case 3.0.5: both particle specific gamma and temperature /
+    # dissipation viscous drag only / vGB82 only
+    if "LANGEVIN_IMPULSE" in espressomd.features():
+        def test_case_305(self):
+            system = self.system
+            # Each of 2 kind of particles will be represented by n instances:
+            n = 1
+            self.dissipation_viscous_drag_setup_bd()
+            self.system.time_step = 0.007
+            self.set_langevin_global_defaults()
+            # The test case-specific thermostat and per-particle parameters
+            system.thermostat.set_vanGunsteren_Berendsen(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            self.set_particle_specific_gamma(n)
+            self.set_particle_specific_temperature(n)
+            # Actual integration and validation run
+            #self.check_dissipation_viscous_drag(n)
+            self.check_dissipation_viscous_drag_acceleration(n)
+
     # Test case 3.1: both particle specific gamma and temperature /
     # fluctuation & dissipation / LD and BD/EB
     def test_case_31(self):
@@ -1199,6 +1218,17 @@ class ThermoTest(ut.TestCase):
             # The test case-specific thermostat
             system.thermostat.turn_off()
             system.thermostat.set_langevin_impulse(
+                kT=self.kT, gamma=self.gamma_global, seed=42)
+            # Actual integration and validation run
+            self.check_fluctuation_dissipation(n, therm_steps, loops)
+        if "LANGEVIN_IMPULSE" in espressomd.features():
+            self.set_initial_cond()
+            system.time_step = 10.0
+            loops = 8
+            therm_steps = 2
+            # The test case-specific thermostat
+            system.thermostat.turn_off()
+            system.thermostat.set_vanGunsteren_Berendsen(
                 kT=self.kT, gamma=self.gamma_global, seed=42)
             # Actual integration and validation run
             self.check_fluctuation_dissipation(n, therm_steps, loops)

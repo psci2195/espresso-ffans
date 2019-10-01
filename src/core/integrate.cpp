@@ -482,8 +482,8 @@ void propagate_vel_finalize_p_inst(bool end_flag) {
                 | THERMO_EB_VELPOS)) {
       bd_drag_vel(p, 0.0);
       bd_random_walk_vel(p, 0.0);
-    } else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (end_flag)) {
-      // NOTE! No need to have the last velocity half leap for THERMO_LANGEVIN_IMPULSE
+    } else if ((thermo_switch & THERMO_LI) && (end_flag)) {
+      // NOTE! No need to have the last velocity half leap for THERMO_LI
       // We keep it v_{n-1/2} before it will jump to v_{n+1/2}.
       // This will be needed only for very last step.
       // The full time step here is provided just to align the LI method formulae properly.
@@ -506,7 +506,7 @@ void propagate_vel_finalize_p_inst(bool end_flag) {
         {
 #ifdef BROWNIAN_DYNAMICS
           if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-                | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)))
+                | THERMO_EB_VELPOS | THERMO_LI)))
 #endif // BROWNIAN_DYNAMICS
           {
             /* Propagate velocity: v(t+dt) = v(t+0.5*dt) + 0.5*dt * a(t+dt) */
@@ -830,7 +830,7 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
       // means no changes in the original velocity.
       bd_vel_steps_tran(p, 0.0);
-    } else if (thermo_switch & THERMO_LANGEVIN_IMPULSE) {
+    } else if (thermo_switch & THERMO_LI) {
       bd_vel_steps_tran(p, time_step, start_flag, end_flag);
     }
     if (thermo_switch & THERMO_BROWNIAN) {
@@ -841,7 +841,7 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
     } else if (thermo_switch & THERMO_EB_VELPOS) {
       bd_vel_steps_tran(p, time_step);
       bd_pos_steps_tran(p, time_step);
-    } else if (thermo_switch & THERMO_LANGEVIN_IMPULSE) {
+    } else if (thermo_switch & THERMO_LI) {
       bd_pos_steps_tran(p, time_step);
     }
 #endif // BROWNIAN_DYNAMICS
@@ -852,7 +852,7 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
       {
 #ifdef BROWNIAN_DYNAMICS
         if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-            | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)))
+            | THERMO_EB_VELPOS | THERMO_LI)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
@@ -1062,7 +1062,7 @@ int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
  */
 void bd_vel_steps_tran(Particle &p, double dt, bool start_flag, bool end_flag) {
   if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-      | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)) {
+      | THERMO_EB_VELPOS | THERMO_LI)) {
     bd_drag_vel(p, dt, start_flag, end_flag);
     bd_random_walk_vel(p, dt, start_flag, end_flag);
   }
@@ -1092,7 +1092,7 @@ void bd_vel_steps_rot(Particle &p, double dt) {
  */
 void bd_pos_steps_tran(Particle &p, double dt) {
   if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-      | THERMO_EB_VELPOS | THERMO_LANGEVIN_IMPULSE)) {
+      | THERMO_EB_VELPOS | THERMO_LI)) {
     bd_drag(p, dt);
     bd_random_walk(p, dt);
   }
@@ -1260,7 +1260,7 @@ void bd_random_walk(Particle &p, double dt) {
     if (!(p.p.ext_flag & COORD_FIXED(j)))
 #endif
     {
-      if (!(thermo_switch & THERMO_LANGEVIN_IMPULSE)) {
+      if (!(thermo_switch & THERMO_LI)) {
         p.r.p[j] += aniso_flag ? delta_pos_lab[j] : delta_pos_body[j];
       }
     }

@@ -55,7 +55,9 @@
 #define THERMO_ERMAK_BUCKHOLZ 32
 // Velocity->Position EB correlation
 #define THERMO_EB_VELPOS 64
-#define THERMO_LANGEVIN_IMPULSE 128
+#define THERMO_LI 128
+// the bit from THERMO_LI | next bit:
+#define THERMO_VGB82 384
 /*@}*/
 
 namespace Thermostat {

@@ -67,7 +67,7 @@ inline void bd_drag(Particle &p, double dt) {
       // Only a conservative part of the force is used here
       // for EB:
       // same terms belong to the eq. (8a), Ermak1980
-      if (!(thermo_switch & THERMO_LANGEVIN_IMPULSE)) {
+      if (!(thermo_switch & THERMO_LI)) {
         // for all BD-like thermostats except LI
         p.r.p[j] += p.f.f[j] * dt / (p.p.mass * beta);
       }
@@ -80,7 +80,7 @@ inline void bd_drag(Particle &p, double dt) {
         p.r.p[j] += (1 / beta) * (p.m.v[j] + p.m.v0[j]
                     - 2.0 * p.f.f[j] / (p.p.mass * beta)) *
                     (1 - exp(-beta * dt)) / (1 + exp(-beta * dt));
-      } else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (dt > 0.)) {
+      } else if ((thermo_switch & THERMO_LI) && (dt > 0.)) {
         double exp0;
         exp0 = exp(- beta * dt / 2.);
         p.r.p[j] += (1. - exp0 * exp0) * p.m.v[j] / (beta * exp0);
@@ -143,11 +143,15 @@ inline void bd_drag_vel(Particle &p, double dt, bool start_flag = false, bool en
         p.m.v0[j] = p.m.v[j];
         double tmp_exp = (1. - exp(-beta * dt));
         p.m.v[j] = p.m.v[j] * exp(-beta * dt) + (p.f.f[j] / (p.p.mass * beta)) * tmp_exp;
-      }  else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (dt > 0.)) {
+      }  else if ((thermo_switch & THERMO_LI) && (dt > 0.)) {
         double exp0 = exp(- beta * dt);
         double wplus = (exp0 - 1. + beta * dt) / (beta * dt * (1. - exp0));
         double wminus = 1. - wplus;
-        double S = 0.; // just to show a consistency with vGB82
+        double S = 0.; // LI default
+        // additional bit:
+        if (thermo_switch & THERMO_VGB82) {
+          S = 0.5 * (wplus - wminus);
+        }
         if ((! start_flag) && (! end_flag)) {
           p.m.v[j] = exp(- beta * dt / 2.) * (exp(- beta * dt / 2.) *
                       p.m.v[j] + dt * p.f.f[j] / p.p.mass +
@@ -243,7 +247,7 @@ inline void bd_random_walk_vel(Particle &p, double dt, bool start_flag = false, 
       } else if ((thermo_switch & THERMO_EB_VELPOS) && (dt > 0.)) {
         double tmp_exp2 = (1. - exp(-2. * beta * dt));
         p.m.v[j] += brown_sigma_vel_temp * noise[j] * sqrt(tmp_exp2 / p.p.mass);
-      } else if ((thermo_switch & THERMO_LANGEVIN_IMPULSE) && (dt > 0.)) {
+      } else if ((thermo_switch & THERMO_LI) && (dt > 0.)) {
         double R, alpha, betacorr, a, b, c, pref, wplus, wminus, exp0;
         exp0 = exp(- beta * dt);
         pref = pow(brown_sigma_vel_temp, 2) / p.p.mass;

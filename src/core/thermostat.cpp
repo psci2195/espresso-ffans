@@ -301,7 +301,7 @@ void thermo_init() {
     thermo_init_ermak_buckholz();
 #endif
 #ifdef LANGEVIN_IMPULSE
-  if (thermo_switch & THERMO_LANGEVIN_IMPULSE)
+  if (thermo_switch & THERMO_LI)
     thermo_init_langevin_impulse();
 #endif // LANGEVIN_IMPULSE
 }
