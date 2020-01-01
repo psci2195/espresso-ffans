@@ -1,21 +1,21 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "cuda_init.hpp"
 #ifdef CUDA
@@ -28,9 +28,8 @@
 #include <mpi.h>
 #include <set>
 
-/** Helper class force device set
+/** Helper class force device set.
  */
-
 struct CompareDevices {
   bool operator()(const EspressoGpuDevice &a,
                   const EspressoGpuDevice &b) const {
@@ -43,12 +42,11 @@ struct CompareDevices {
   }
 };
 
-/** Gather list of CUDA devices on all nodes on the master node
-    It relies on MPI_Get_processor_name() to get a unique identifier of
-    the physical node, as opposed to the logical rank of which there can
-    be more than one on one node.
+/** Gather list of CUDA devices on all nodes on the master node.
+ *  It relies on MPI_Get_processor_name() to get a unique identifier of
+ *  the physical node, as opposed to the logical rank of which there can
+ *  be more than one on one node.
  */
-
 std::vector<EspressoGpuDevice> cuda_gather_gpus() {
   int n_gpus = cuda_get_n_gpus();
   char proc_name[MPI_MAX_PROCESSOR_NAME];
@@ -76,7 +74,7 @@ std::vector<EspressoGpuDevice> cuda_gather_gpus() {
     }
   }
 
-  /** Update n_gpus to number of usable devices */
+  /* Update n_gpus to number of usable devices */
   n_gpus = devices.size();
 
   if (this_node == 0) {

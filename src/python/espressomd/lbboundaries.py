@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -23,7 +23,7 @@ if any(has_features(i) for i in ["LB_BOUNDARIES", "LB_BOUNDARIES_GPU"]):
     class LBBoundaries(ScriptObjectRegistry):
 
         """
-        Creates a set of lattice Boltzmann boundaries.
+        Creates a set of lattice-Boltzmann boundaries.
 
         """
 

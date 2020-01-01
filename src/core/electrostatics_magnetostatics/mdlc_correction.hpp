@@ -1,34 +1,36 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /** \file
  *  main header-file for MDLC (magnetic dipolar layer correction).
  *
  *  Developer: Joan J. Cerda.
+ *
  *  Purpose:   get the corrections for dipolar 3D algorithms
  *             when applied to a slab geometry and dipolar
  *             particles. DLC & co
- *  Article:   A. Brodka, Chemical Physics Letters 400, 62-67 (2004).
  *
- *             We also include a tuning function that returns the
- *             cut-off necessary to attend a certain accuracy.
+ *  Article:   @cite brodka04a
+ *
+ *  We also include a tuning function that returns the
+ *  cut-off necessary to attend a certain accuracy.
  *
  *  Restrictions: the slab must be such that the z is the short
  *                direction. Otherwise we get trash.
@@ -60,7 +62,7 @@ struct DLC_struct {
    */
   double gap_size;
 
-  /** Flag whether #far_cut was set by the user, or calculated by Espresso.
+  /** Flag whether #far_cut was set by the user, or calculated by ESPResSo.
    *  In the latter case, the cutoff will be adapted if important parameters,
    *  such as the box dimensions, change.
    */

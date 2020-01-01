@@ -1,31 +1,31 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /** \file
  *  Implementation of \ref elc.hpp.
  */
+#include "Particle.hpp"
 #include "cells.hpp"
 #include "communication.hpp"
 #include "errorhandling.hpp"
 #include "mmm-common.hpp"
-#include "particle_data.hpp"
 #include "pressure.hpp"
 #include <cmath>
 #include <mpi.h>
@@ -229,6 +229,9 @@ void distribute(int size) {
 /* dipole terms */
 /*****************************************************************/
 
+/** Calculate the dipole force.
+ *  See @cite yeh99a.
+ */
 static void add_dipole_force(const ParticleRange &particles) {
   double pref = coulomb.prefactor * 4 * M_PI * ux * uy * uz;
   int size = 3;
@@ -270,7 +273,7 @@ static void add_dipole_force(const ParticleRange &particles) {
 
   distribute(size);
 
-  // Yeh+Berkowitz dipole term
+  // Yeh + Berkowitz dipole term @cite yeh99a
   field_tot = gblcblk[0];
 
   // Const. potential contribution
@@ -290,6 +293,9 @@ static void add_dipole_force(const ParticleRange &particles) {
   }
 }
 
+/** Calculate the dipole energy.
+ *  See @cite yeh99a.
+ */
 static double dipole_energy(const ParticleRange &particles) {
   double pref = coulomb.prefactor * 2 * M_PI * ux * uy * uz;
   int size = 7;
@@ -332,7 +338,7 @@ static double dipole_energy(const ParticleRange &particles) {
 
   distribute(size);
 
-  // Yeh + Berkowitz term
+  // Yeh + Berkowitz term @cite yeh99a
   double eng = 2 * pref * (Utils::sqr(gblcblk[2]) + gblcblk[2] * gblcblk[3]);
 
   if (!elc_params.neutralize) {
@@ -347,11 +353,11 @@ static double dipole_energy(const ParticleRange &particles) {
       // zero potential difference contribution
       eng += pref * height_inverse / uz * Utils::sqr(gblcblk[6]);
       // external potential shift contribution
-      eng -= elc_params.pot_diff * height_inverse * gblcblk[6];
+      eng -= 2 * elc_params.pot_diff * height_inverse * gblcblk[6];
     }
 
     /* counter the P3M homogeneous background contribution to the
-       boundaries.  We never need that, since a homogeneous background
+       boundaries. We never need that, since a homogeneous background
        spanning the artificial boundary layers is aphysical. */
     eng += pref * (-(gblcblk[1] * gblcblk[4] + gblcblk[0] * gblcblk[5]) -
                    (1. - 2. / 3.) * gblcblk[0] * gblcblk[1] *
@@ -1131,7 +1137,7 @@ int ELC_sanity_checks() {
   // metallic boundaries
   if (elc_params.dielectric_contrast_on && elc_params.const_pot &&
       p3m.square_sum_q > ROUND_ERROR_PREC) {
-    runtimeErrorMsg() << "ELC does currently not support non-neutral "
+    runtimeErrorMsg() << "ELC does not currently support non-neutral "
                          "systems with a dielectric contrast.";
     return ES_ERROR;
   }

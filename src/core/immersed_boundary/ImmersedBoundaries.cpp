@@ -1,24 +1,25 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "ImmersedBoundaries.hpp"
 
+#include "Particle.hpp"
 #include "bonded_interactions/bonded_interaction_data.hpp"
 #include "cells.hpp"
 #include "communication.hpp"
@@ -30,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /** Volume conservation.
  *  Calculate volumes, volume force and add it to each virtual particle.
- *  This function is called from integrate_vv
+ *  This function is called from integrate_vv.
  */
 void ImmersedBoundaries::volume_conservation() {
   if (VolumeInitDone && !BoundariesFound) {
@@ -88,8 +89,8 @@ int ImmersedBoundaries::volume_conservation_set_params(const int bond_type,
   // General bond parameters
   bonded_ia_params[bond_type].type = BONDED_IA_IBM_VOLUME_CONSERVATION;
   bonded_ia_params[bond_type].num =
-      0; // This means that Espresso requires one bond partner. Here we simply
-         // ignore it, but Espresso cannot handle 0.
+      0; // This means that ESPResSo requires one bond partner. Here we simply
+         // ignore it, but ESPResSo cannot handle 0.
 
   // Specific stuff
   if (softID > MaxNumIBM) {
@@ -115,7 +116,9 @@ int ImmersedBoundaries::volume_conservation_set_params(const int bond_type,
   return ES_OK;
 }
 
-/** Calculate partial volumes on all compute nodes and call MPI to sum up */
+/** Calculate partial volumes on all compute nodes and call MPI to sum up.
+ *  See @cite zhang01b, @cite dupin08a, @cite kruger12a.
+ */
 void ImmersedBoundaries::calc_volumes() {
 
   // Partial volumes for each soft particle, to be summed up
@@ -133,7 +136,7 @@ void ImmersedBoundaries::calc_volumes() {
       // triangles, not all particles First round to check for volume
       // conservation and virtual Loop over all bonds of this particle Actually
       // j loops over the bond-list, i.e. the bond partners (see
-      // particle_data.hpp)
+      // Particle.hpp)
       int softID = -1;
       int j = 0;
       while (j < p1.bl.n) {
@@ -182,23 +185,22 @@ void ImmersedBoundaries::calc_volumes() {
               return;
             }
 
-            // Unfold position of first node
-            // this is to get a continuous trajectory with no jumps when box
-            // boundaries are crossed
+            // Unfold position of first node.
+            // This is to get a continuous trajectory with no jumps when box
+            // boundaries are crossed.
             auto const x1 = unfolded_position(p1.r.p, p1.l.i, box_geo.length());
             auto const x2 = x1 + get_mi_vector(p2->r.p, x1, box_geo);
             auto const x3 = x1 + get_mi_vector(p3->r.p, x1, box_geo);
 
             // Volume of this tetrahedron
-            // See Cha Zhang et.al. 2001, doi:10.1109/ICIP.2001.958278
-            // http://research.microsoft.com/en-us/um/people/chazhang/publications/icip01_ChaZhang.pdf
+            // See @cite zhang01b
             // The volume can be negative, but it is not necessarily the "signed
             // volume" in the above paper (the sign of the real "signed volume"
             // must be calculated using the normal vector; the result of the
             // calculation here is simply a term in the sum required to
             // calculate the volume of a particle). Again, see the paper. This
             // should be equivalent to the formulation using vector identities
-            // in Krüger thesis
+            // in @cite kruger12a
 
             const double v321 = x3[0] * x2[1] * x1[2];
             const double v231 = x2[0] * x3[1] * x1[2];
@@ -236,11 +238,11 @@ void ImmersedBoundaries::calc_volume_force() {
       Particle &p1 = cell->part[i];
 
       // Check if particle has a BONDED_IA_IBM_TRIEL and a
-      // BONDED_IA_IBM_VOLUME_CONSERVATION Basically this loops over all
-      // triangles, not all particles First round to check for volume
-      // conservation and virtual Loop over all bonds of this particle Actually
-      // j loops over the bond-list, i.e. the bond partners (see
-      // particle_data.hpp)
+      // BONDED_IA_IBM_VOLUME_CONSERVATION. Basically this loops over all
+      // triangles, not all particles. First round to check for volume
+      // conservation and virtual. Loop over all bonds of this particle.
+      // Actually j loops over the bond-list, i.e. the bond partners (see
+      // Particle.hpp).
       int softID = -1;
       double volRef = 0.;
       double kappaV = 0.;
@@ -278,9 +280,9 @@ void ImmersedBoundaries::calc_volume_force() {
             Particle &p2 = *local_particles[p1.bl.e[j + 1]];
             Particle &p3 = *local_particles[p1.bl.e[j + 2]];
 
-            // Unfold position of first node
-            // this is to get a continuous trajectory with no jumps when box
-            // boundaries are crossed
+            // Unfold position of first node.
+            // This is to get a continuous trajectory with no jumps when box
+            // boundaries are crossed.
             auto const x1 = unfolded_position(p1.r.p, p1.l.i, box_geo.length());
 
             // Unfolding seems to work only for the first particle of a triel
@@ -289,7 +291,7 @@ void ImmersedBoundaries::calc_volume_force() {
             auto const a13 = get_mi_vector(p3.r.p, x1, box_geo);
 
             // Now we have the true and good coordinates
-            // Compute force according to eq. C.46 Krüger thesis
+            // Compute force according to eq. (C.46) in @cite kruger12a.
             // It is the same as deriving Achim's equation w.r.t x
             /*                        const double fact = kappaV * 1/6. *
             (IBMVolumesCurrent[softID] - volRef) / IBMVolumesCurrent[softID];
@@ -311,8 +313,8 @@ void ImmersedBoundaries::calc_volume_force() {
              vector_product(x2, x1, n);
              for (int k=0; k < 3; k++) p3.f.f[k] += fact*n[k];*/
 
-            // This is Dupin 2008. I guess the result will be very similar as
-            // the code above
+            // This is eq. (9) in @cite dupin08a. I guess the result will be
+            // very similar as the code above.
             auto const n = vector_product(a12, a13);
             const double ln = n.norm();
             const double A = 0.5 * ln;
@@ -327,7 +329,7 @@ void ImmersedBoundaries::calc_volume_force() {
             p3.f.f += force;
           }
           // Iterate, increase by the number of partners of this bond + 1 for
-          // bond type
+          // bond type.
           j += iaparams.num + 1;
         }
       }

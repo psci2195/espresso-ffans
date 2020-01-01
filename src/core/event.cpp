@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /** \file
  *  Hook procedures.
  *
@@ -25,6 +25,7 @@
  */
 #include "event.hpp"
 
+#include "Particle.hpp"
 #include "bonded_interactions/thermalized_bond.hpp"
 #include "cells.hpp"
 #include "collision.hpp"
@@ -45,7 +46,6 @@
 #include "npt.hpp"
 #include "nsquare.hpp"
 #include "partCfg_global.hpp"
-#include "particle_data.hpp"
 #include "pressure.hpp"
 #include "random.hpp"
 #include "rattle.hpp"
@@ -324,7 +324,7 @@ void on_boxl_change() {
 void on_cell_structure_change() {
 
 /* Now give methods a chance to react to the change in cell
-   structure.  Most ES methods need to reinitialize, as they depend
+   structure. Most ES methods need to reinitialize, as they depend
    on skin, node grid and so on. Only for a change in box length we
    have separate, faster methods, as this might happen frequently
    in a NpT simulation. */
@@ -446,12 +446,6 @@ void on_ghost_flags_change() {
 #endif
   if (thermo_switch & THERMO_DPD)
     ghosts_have_v = true;
-#ifdef VIRTUAL_SITES
-  // If they have velocities, VIRTUAL_SITES need v to update v of virtual sites
-  if (virtual_sites()->get_have_velocity()) {
-    ghosts_have_v = true;
-  };
-#endif
   // THERMALIZED_DIST_BOND needs v to calculate v_com and v_dist for thermostats
   if (n_thermalized_bonds) {
     ghosts_have_v = true;
@@ -466,7 +460,7 @@ void on_ghost_flags_change() {
 
 void update_dependent_particles() {
 #ifdef VIRTUAL_SITES
-  virtual_sites()->update();
+  virtual_sites()->update(true);
 #endif
   cells_update_ghosts();
 

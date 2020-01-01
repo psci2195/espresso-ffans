@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-  Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /** \file
  *  %Lattice Boltzmann algorithm for hydrodynamic degrees of freedom.
  *
@@ -63,7 +63,7 @@ using Utils::get_linear_index;
 #include <iostream>
 
 namespace {
-/** Basis of the mode space as described in [Duenweg, Schiller, Ladd] */
+/** Basis of the mode space as described in @cite dunweg07a */
 extern constexpr const std::array<std::array<int, 19>, 19> e_ki = {
     {{{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
      {{0, 1, -1, 0, 0, 0, 0, 1, -1, 1, -1, 1, -1, 1, -1, 0, 0, 0, 0}},
@@ -85,6 +85,7 @@ extern constexpr const std::array<std::array<int, 19>, 19> e_ki = {
      {{0, -1, -1, 1, 1, -0, -0, 0, 0, 0, 0, 1, 1, 1, 1, -1, -1, -1, -1}},
      {{0, -1, -1, -1, -1, 2, 2, 2, 2, 2, 2, -1, -1, -1, -1, -1, -1, -1, -1}}}};
 
+/** Transposed version of @ref e_ki */
 extern constexpr const std::array<std::array<int, 19>, 19> e_ki_transposed = {
     {{{1, 0, 0, 0, -1, 0, -0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0}},
      {{1, 1, 0, 0, 0, 1, 1, 0, 0, 0, -2, 0, 0, -0, 0, 0, -2, -1, -1}},
@@ -275,12 +276,12 @@ void lb_reinit_fluid(std::vector<LB_FluidNode> &lb_fields,
 
 void lb_reinit_parameters(LB_Parameters &lb_parameters) {
   if (lb_parameters.viscosity > 0.0) {
-    /* Eq. (80) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
+    /* Eq. (80) @cite dunweg07a. */
     lb_parameters.gamma_shear = 1. - 2. / (6. * lb_parameters.viscosity + 1.);
   }
 
   if (lb_parameters.bulk_viscosity > 0.0) {
-    /* Eq. (81) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007). */
+    /* Eq. (81) @cite dunweg07a. */
     lb_parameters.gamma_bulk =
         1. - 2. / (9. * lb_parameters.bulk_viscosity + 1.);
   }
@@ -299,7 +300,7 @@ void lb_reinit_parameters(LB_Parameters &lb_parameters) {
   // gamma_even = 0.0;
 
   if (lb_parameters.kT > 0.0) {
-    /* Eq. (51) Duenweg, Schiller, Ladd, PRE 76(3):036704 (2007).
+    /* Eq. (51) @cite dunweg07a.
      * Note that the modes are not normalized as in the paper here! */
     double mu = lb_parameters.kT / D3Q19::c_sound_sq<double> *
                 lb_parameters.tau * lb_parameters.tau /
@@ -1311,8 +1312,8 @@ Utils::Vector6d lb_calc_stress(std::array<double, 19> const &modes,
 
   // Transform the stress tensor components according to the modes that
   // correspond to those used by U. Schiller. In terms of populations this
-  // expression then corresponds exactly to those in Eqs. 116 - 121 in the
-  // Duenweg and Ladd paper, when these are written out in populations.
+  // expression then corresponds exactly to those in eq. (116)-(121) in
+  // @cite dunweg07a, when these are written out in populations.
   // But to ensure this, the expression in Schiller's modes has to be different!
 
   Utils::Vector6d stress;
@@ -1330,13 +1331,6 @@ Utils::Vector6d lb_calc_stress(std::array<double, 19> const &modes,
 }
 
 #ifdef LB_BOUNDARIES
-/** Bounce back boundary conditions.
- * The populations that have propagated into a boundary node
- * are bounced back to the node they came from. This results
- * in no slip boundary conditions.
- *
- * [cf. Ladd and Verberg, J. Stat. Phys. 104(5/6):1191-1251, 2001]
- */
 void lb_bounce_back(LB_Fluid &lbfluid, const LB_Parameters &lb_parameters,
                     const std::vector<LB_FluidNode> &lb_fields) {
   int k, i, l;

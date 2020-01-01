@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2018 The ESPResSo project
+# Copyright (C) 2016-2019 The ESPResSo project
 # Copyright (C) 2014 Olaf Lenz
 #
 # This file is part of ESPResSo.
@@ -47,7 +47,7 @@ def has_features(*args):
         raise RuntimeError(
             "'{}' is not a feature".format(','.join(check_set - all_features())))
 
-    return check_set < set(features())
+    return check_set <= set(features())
 
 
 def missing_features(*args):

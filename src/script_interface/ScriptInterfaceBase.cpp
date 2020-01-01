@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-  Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "ScriptInterfaceBase.hpp"
 #include "ParallelScriptInterface.hpp"
@@ -57,8 +57,7 @@ ScriptInterfaceBase::make_shared(std::string const &name,
   const auto id = sp->id();
 
   /* Now get a reference to the corresponding weak_ptr in ObjectId and update
-     it with our shared ptr, so that everybody uses the same ref count.
-  */
+   * it with our shared ptr, so that everybody uses the same ref count. */
   sp->get_instance(id) = sp;
 
   return sp;
@@ -75,7 +74,7 @@ ScriptInterfaceBase::get_instance(ObjectId id) {
  * @brief  Return a Variant representation of the state of the object.
  *
  * This should return the internal state of the instance, so that
- * the instance can be restored from this information.  The default
+ * the instance can be restored from this information. The default
  * implementation stores all the public parameters, including object
  * parameters that are captured by calling get_state on them.
  */

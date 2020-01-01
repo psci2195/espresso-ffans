@@ -1,3 +1,19 @@
+# Copyright (C) 2010-2019 The ESPResSo project
+#
+# This file is part of ESPResSo.
+#
+# ESPResSo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ESPResSo is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 include "myconfig.pxi"
 IF CUDA:
     from .lb cimport HydrodynamicInteraction
@@ -214,7 +230,7 @@ IF ELECTROKINETICS:
         def ek_init(self):
             """
             Initializes the electrokinetic system.
-            This automatically initializes the lattice Boltzmann method on the GPU.
+            This automatically initializes the lattice-Boltzmann method on the GPU.
 
             """
             err = ek_init()
@@ -251,19 +267,19 @@ IF ELECTROKINETICS:
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the boundary is written to.
+                Path of the .vtk file the boundary is written to.
 
             """
             lb_lbfluid_print_vtk_boundary(utils.to_char_pointer(path))
 
         def print_vtk_velocity(self, path):
             """
-            Writes the lattice Boltzmann velocity information into a vtk-file.
+            Writes the lattice-Boltzmann velocity information into a vtk-file.
 
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the velocity is written to.
+                Path of the .vtk file the velocity is written to.
 
             """
             ek_lb_print_vtk_velocity(utils.to_char_pointer(path))
@@ -275,7 +291,7 @@ IF ELECTROKINETICS:
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the LB density is written to.
+                Path of the .vtk file the LB density is written to.
 
             """
             ek_lb_print_vtk_density(utils.to_char_pointer(path))
@@ -287,7 +303,7 @@ IF ELECTROKINETICS:
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the electrostatic potential is written to.
+                Path of the .vtk file the electrostatic potential is written to.
 
             """
             ek_print_vtk_potential(utils.to_char_pointer(path))
@@ -299,7 +315,7 @@ IF ELECTROKINETICS:
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the LB force is written to.
+                Path of the .vtk file the LB force is written to.
 
             """
             ek_print_vtk_lbforce_density(utils.to_char_pointer(path))
@@ -313,7 +329,7 @@ IF ELECTROKINETICS:
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the electrostatic potential is written to.
+                Path of the .vtk file the electrostatic potential is written to.
 
             """
 
@@ -434,7 +450,7 @@ IF ELECTROKINETICS:
                 if k in self.valid_keys():
                     self._params[k] = kwargs[k]
                 else:
-                    raise KeyError("%s is not a vaild key" % k)
+                    raise KeyError("%s is not a valid key" % k)
 
         def valid_keys(self):
             """
@@ -496,7 +512,7 @@ IF ELECTROKINETICS:
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the species density is written to.
+                Path of the .vtk file the species density is written to.
 
             """
             ek_print_vtk_density(self.id, utils.to_char_pointer(path))
@@ -508,7 +524,7 @@ IF ELECTROKINETICS:
             Parameters
             ----------
             path : :obj:`str`
-                The path and vtk-file name the species flux is written to.
+                Path of the .vtk file the species flux is written to.
 
             """
             ek_print_vtk_flux(self.id, utils.to_char_pointer(path))

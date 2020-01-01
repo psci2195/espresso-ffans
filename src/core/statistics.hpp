@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef _STATISTICS_H
 #define _STATISTICS_H
 /** \file
@@ -28,8 +28,8 @@
 
 #include "Observable_stat.hpp"
 #include "PartCfg.hpp"
+#include "Particle.hpp"
 #include "nonbonded_interactions/nonbonded_interaction_data.hpp"
-#include "particle_data.hpp"
 
 #include <map>
 #include <string>
@@ -88,8 +88,8 @@ void analyze_append(PartCfg &partCfg);
  *  Calculates the distance distribution of particles with types given
  *  in the @p p1_types list around particles with types given in the
  *  @p p2_types list. The distances range from @p r_min to @p r_max, binned
- *  into @p r_bins bins which are either equidistant (@p log_flag==0) or
- *  logarithmically equidistant (@p log_flag==1). The result is stored
+ *  into @p r_bins bins which are either equidistant (@p log_flag==false) or
+ *  logarithmically equidistant (@p log_flag==true). The result is stored
  *  in the @p array dist.
  *  @param p1_types list with types of particles to find the distribution for.
  *  @param n_p1     length of @p p1_types.
@@ -105,8 +105,8 @@ void analyze_append(PartCfg &partCfg);
  */
 void calc_part_distribution(PartCfg &, int const *p1_types, int n_p1,
                             int const *p2_types, int n_p2, double r_min,
-                            double r_max, int r_bins, int log_flag, double *low,
-                            double *dist);
+                            double r_max, int r_bins, bool log_flag,
+                            double *low, double *dist);
 
 /** Calculate the radial distribution function.
  *

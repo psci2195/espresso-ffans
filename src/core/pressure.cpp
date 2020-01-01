@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /** \file
  *  Implementation of pressure.hpp.
  */
@@ -53,14 +53,13 @@ nptiso_struct nptiso = {0.0,
                         0.0,
                         0.0,
                         0.0,
-                        0.0,
                         {0.0, 0.0, 0.0},
                         {0.0, 0.0, 0.0},
                         true,
                         0,
                         {NPTGEOM_XDIR, NPTGEOM_YDIR, NPTGEOM_ZDIR},
                         0,
-                        0,
+                        false,
                         0};
 
 /************************************************************/
@@ -105,9 +104,7 @@ inline void add_single_particle_virials(int v_comp, Particle &p) {
 
 void pressure_calc(double *result, double *result_t, double *result_nb,
                    double *result_t_nb, int v_comp) {
-  int n, i;
-  double volume =
-      box_geo.length()[0] * box_geo.length()[1] * box_geo.length()[2];
+  auto const volume = box_geo.volume();
 
   if (!interactions_sanity_checks())
     return;
@@ -138,20 +135,20 @@ void pressure_calc(double *result, double *result_t, double *result_nb,
       virials.virtual_sites, p_tensor.virtual_sites);
 #endif
 
-  for (n = 1; n < virials.data.n; n++)
+  for (int n = 1; n < virials.data.n; n++)
     virials.data.e[n] /= 3.0 * volume;
 
-  for (i = 0; i < 9; i++)
+  for (int i = 0; i < 9; i++)
     p_tensor.data.e[i] /= (volume * time_step * time_step);
 
-  for (i = 9; i < p_tensor.data.n; i++)
+  for (int i = 9; i < p_tensor.data.n; i++)
     p_tensor.data.e[i] /= volume;
 
   /* Intra- and Inter- part of nonbonded interaction */
-  for (n = 0; n < virials_non_bonded.data_nb.n; n++)
+  for (int n = 0; n < virials_non_bonded.data_nb.n; n++)
     virials_non_bonded.data_nb.e[n] /= 3.0 * volume;
 
-  for (i = 0; i < p_tensor_non_bonded.data_nb.n; i++)
+  for (int i = 0; i < p_tensor_non_bonded.data_nb.n; i++)
     p_tensor_non_bonded.data_nb.e[i] /= volume;
 
   /* gather data */

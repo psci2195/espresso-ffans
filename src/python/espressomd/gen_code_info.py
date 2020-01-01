@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2018 The ESPResSo project
+# Copyright (C) 2016-2019 The ESPResSo project
 # Copyright (C) 2014 Olaf Lenz
 #
 # This file is part of ESPResSo.
@@ -47,7 +47,7 @@ cfile.write("""
 include "myconfig.pxi"
 
 def features():
-    \"\"\"Returns list of features compiled into Espresso core\"\"\"
+    \"\"\"Returns list of features compiled into ESPResSo core\"\"\"
 
     f=[]
 """)

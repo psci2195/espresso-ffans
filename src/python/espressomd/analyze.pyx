@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -127,9 +127,9 @@ class Analysis:
         ----------
         id : :obj:`int`, optional
             Calculate distance to particle with
-            :attr:`~espressomd.particle_data.ParticleHandle.id` `id`.
+            :attr:`~espressomd.particle_data.ParticleHandle.id` ``id``.
         pos : array of :obj:`float`, optional
-            Calculate distance to position `pos`.
+            Calculate distance to position ``pos``.
 
         Returns
         -------
@@ -183,7 +183,7 @@ class Analysis:
             whether to include the particles contribution to the linear
             momentum.
         include_lbfluid : :obj:`bool`, optional
-            whether to include the Lattice Boltzmann fluid contribution
+            whether to include the lattice-Boltzmann fluid contribution
             to the linear momentum.
 
         Returns
@@ -240,7 +240,7 @@ class Analysis:
         r_catch : :obj:`float`
             Radius of the region.
         plane : :obj:`str`, \{'xy', 'xz', 'yz'\}
-            If given, `r_catch` is the distance to the respective plane.
+            If given, ``r_catch`` is the distance to the respective plane.
 
         Returns
         -------
@@ -306,8 +306,11 @@ class Analysis:
         Returns
         -------
         list of lists
-            columns indicate `index_radial`, `index_axial`, `pos_radial`, `pos_axial`, `binvolume`, `density`, `v_radial`, `v_axial`, `density`, `v_radial` and `v_axial`.
-            Note that the columns `density`, `v_radial` and `v_axial` appear for each type indicated in `types` in the same order.
+            columns indicate ``index_radial``, ``index_axial``, ``pos_radial``,
+            ``pos_axial``, ``binvolume``, ``density``, ``v_radial``,
+            ``v_axial``, ``density``, ``v_radial`` and ``v_axial``.
+            Note that the columns ``density``, ``v_radial`` and ``v_axial``
+            appear for each type indicated in ``types``, in the same order.
 
         """
 
@@ -319,7 +322,7 @@ class Analysis:
         check_type_or_throw_except(
             length, 1, float, "length has to be a float")
         check_type_or_throw_except(
-            radius, 1, float, "radius has to be a floats")
+            radius, 1, float, "radius has to be a float")
         check_type_or_throw_except(
             bins_axial, 1, int, "bins_axial has to be an int")
         check_type_or_throw_except(
@@ -384,7 +387,7 @@ class Analysis:
 
         Returns
         -------
-        dict
+        :obj:`dict`
             A dictionary with the following keys:
 
             * ``"total"``: total pressure
@@ -409,7 +412,7 @@ class Analysis:
         # Dict to store the results
         p = OrderedDict()
 
-        # Update in espresso core if necessary
+        # Update in ESPResSo core if necessary
         if (analyze.total_pressure.init_status != 1 + v_comp):
             analyze.update_pressure(v_comp)
 
@@ -498,7 +501,7 @@ class Analysis:
 
         Returns
         -------
-        dict
+        :obj:`dict`
             A dictionary with the following keys:
 
             * ``"total"``: total stress tensor
@@ -521,7 +524,7 @@ class Analysis:
         # Dict to store the results
         p = OrderedDict()
 
-        # Update in espresso core if necessary
+        # Update in ESPResSo core if necessary
         if (analyze.total_p_tensor.init_status != 1 + v_comp):
             analyze.update_pressure(v_comp)
 
@@ -633,8 +636,8 @@ class Analysis:
         Returns
         -------
         :obj:`dict`
-            A dictionary with keys `total`, `kinetic`, `bonded`, `nonbonded`,
-            `coulomb`, `external_fields`.
+            A dictionary with keys ``total``, ``kinetic``, ``bonded``, ``nonbonded``,
+            ``coulomb``, ``external_fields``.
 
 
         Examples
@@ -647,8 +650,8 @@ class Analysis:
         >>> print(energy["external_fields"])
 
         """
-    #  if system.n_part == 0:
-    #    raise Exception('no particles')
+        #  if system.n_part == 0:
+        #    raise Exception('no particles')
 
         e = OrderedDict()
 
@@ -694,12 +697,12 @@ class Analysis:
                 e["non_bonded", i, j] = analyze.obsstat_nonbonded(& analyze.total_energy, i, j)[0]
                 if i <= j:
                     total_non_bonded += analyze.obsstat_nonbonded(& analyze.total_energy, i, j)[0]
-    #        total_intra +=analyze.obsstat_nonbonded_intra(&analyze.total_energy_non_bonded, i, j)[0]
-    #        e["non_bonded_intra",i,j] =analyze.obsstat_nonbonded_intra(&analyze.total_energy_non_bonded, i, j)[0]
-    #        e["nonBondedInter",i,j] =analyze.obsstat_nonbonded_inter(&analyze.total_energy_non_bonded, i, j)[0]
-    #        total_inter+= analyze.obsstat_nonbonded_inter(&analyze.total_energy_non_bonded, i, j)[0]
-    #  e["nonBondedIntra"]=total_intra
-    #  e["nonBondedInter"]=total_inter
+        #       total_intra +=analyze.obsstat_nonbonded_intra(&analyze.total_energy_non_bonded, i, j)[0]
+        #       e["non_bonded_intra",i,j] =analyze.obsstat_nonbonded_intra(&analyze.total_energy_non_bonded, i, j)[0]
+        #       e["nonBondedInter",i,j] =analyze.obsstat_nonbonded_inter(&analyze.total_energy_non_bonded, i, j)[0]
+        #       total_inter+= analyze.obsstat_nonbonded_inter(&analyze.total_energy_non_bonded, i, j)[0]
+        # e["nonBondedIntra"]=total_intra
+        # e["nonBondedInter"]=total_inter
         e["non_bonded"] = total_non_bonded
 
         # Electrostatics
@@ -847,9 +850,10 @@ class Analysis:
         """
         Calculate the structure factor for given types.  Returns the
         spherically averaged structure factor of particles specified in
-        `types`.  The structure factor is calculated for all possible wave
-        vectors q up to `order` Do not choose parameter `order` too large
-        because the number of calculations grows as `order` to the third power.
+        ``sf_types``.  The structure factor is calculated for all possible wave
+        vectors q up to ``sf_order``. Do not choose parameter ``sf_order`` too
+        large because the number of calculations grows as ``sf_order`` to the
+        third power.
 
         Parameters
         ----------
@@ -991,11 +995,11 @@ class Analysis:
             Maximum distance.
         r_bins : :obj:`int`
             Number of bins.
-        log_flag : :obj:`int`
-            When set to 0, the bins are linearly equidistant; when set to 1,
-            the bins are logarithmically equidistant.
-        int_flag : :obj:`int`
-            When set to 1, the result is an integrated distribution.
+        log_flag : :obj:`bool`
+            When set to ``False``, the bins are linearly equidistant; when set
+            to ``True``, the bins are logarithmically equidistant.
+        int_flag : :obj:`bool`
+            When set to ``True``, the result is an integrated distribution.
 
         Returns
         -------
@@ -1013,7 +1017,7 @@ class Analysis:
         if r_max is None:
             r_max = min_box_l / 2.0
 
-        if r_min < 0.0 or (log_flag == 1 and r_min == 0.0):
+        if r_min < 0.0 or (log_flag and r_min == 0.0):
             raise ValueError("r_min was chosen too small!")
         if r_max <= r_min:
             raise ValueError("r_max has to be greater than r_min!")
@@ -1029,7 +1033,7 @@ class Analysis:
 
         analyze.calc_part_distribution(
             analyze.partCfg(), p1_types.e, p1_types.n, p2_types.e, p2_types.n,
-            r_min, r_max, r_bins, log_flag, & low, distribution.data())
+            r_min, r_max, r_bins, < bint > log_flag, & low, distribution.data())
 
         np_distribution = create_nparray_from_double_array(
             distribution.data(), r_bins)
@@ -1100,7 +1104,7 @@ class Analysis:
 
         Returns
         -------
-        dict
+        :obj:`dict`
             A dictionary with the following keys:
 
             * ``"Rg^2"``: squared radius of gyration
@@ -1122,13 +1126,12 @@ class Analysis:
                 type, 1, int, "particle type has to be an int")
             if (type < 0 or type >= analyze.max_seen_particle_type):
                 raise ValueError("Particle type", type, "does not exist!")
-        selection = np.in1d(self._system.part[:].type, p_type)
-
-        cm = np.mean(self._system.part[selection].pos, axis=0)
+        selection = self._system.part.select(lambda p: (p.type in p_type))
+        cm = np.mean(selection.pos, axis=0)
         mat = np.zeros(shape=(3, 3))
         for i, j in np.ndindex((3, 3)):
-            mat[i, j] = np.mean(((self._system.part[selection].pos)[:, i] - cm[i]) * (
-                (self._system.part[selection].pos)[:, j] - cm[j]))
+            mat[i, j] = np.mean(((selection.pos)[:, i] - cm[i]) * (
+                (selection.pos)[:, j] - cm[j]))
         w, v = np.linalg.eig(mat)
         # return eigenvalue/vector tuples in order of increasing eigenvalues
         order = np.argsort(np.abs(w))[::-1]

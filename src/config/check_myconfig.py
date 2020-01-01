@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -54,7 +54,7 @@ def handle_unknown(f, all_features):
     for d in all_features:
         dist = damerau_levenshtein_distance(f, d)
         if dist < max_dist:
-            min_dist = dist
+            max_dist = dist
             match = d
 
     if match:

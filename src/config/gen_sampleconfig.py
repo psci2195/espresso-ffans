@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (C) 2013,2014 The ESPResSo project
+# Copyright (C) 2013,2014,2018-2019 The ESPResSo project
 # Copyright (C) 2012 Olaf Lenz
 #
 # This file is part of ESPResSo.
@@ -20,8 +20,6 @@
 # This script appends the sample list of features to the file
 #   myconfig-sample.h.
 #
-import time
-import string
 import fileinput
 import inspect
 import sys

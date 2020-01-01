@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 # Copyright (C) 2012 Olaf Lenz
 #
 # This file is part of ESPResSo.
@@ -20,11 +20,10 @@
 # This module parses the feature definition file features.def
 #
 import fileinput
-import string
 import re
 
 
-class SyntaxError:
+class SyntaxError(Exception):
 
     def __init__(self, message, instead):
         self.message = message
@@ -171,7 +170,7 @@ class defs:
         for feature in allfeatures:
             featurevars[feature] = feature in newset
 
-        for feature, expr, undef in self.requirements:
+        for feature, expr, _ in self.requirements:
             # print 'Requirement: ', feature, ' -> ', expr
             if feature in newset:
                 if not eval(expr, featurevars):

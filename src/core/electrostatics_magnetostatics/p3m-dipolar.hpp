@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef _P3M_MAGNETOSTATICS_H
 #define _P3M_MAGNETOSTATICS_H
 /** \file
@@ -25,13 +25,10 @@
  *
  *  We use here a P3M (Particle-Particle Particle-Mesh) method based
  *  on the dipolar Ewald summation. Details of the used method can be found in
- *  Hockney/Eastwood and Deserno/Holm. The file p3m contains only the
- *  Particle-Mesh part.
+ *  @cite hockney88a and @cite deserno98a @cite deserno98b. The file p3m
+ *  contains only the Particle-Mesh part.
  *
- *  Further reading:
- *  - J. J. Cerda,
- *    *P3M for dipolar interactions*,
- *    J. Chem. Phys (129) 234104, 2008
+ *  Further reading: @cite cerda08d
  *
  *  Implementation in p3m-dipolar.cpp.
  */
@@ -39,10 +36,11 @@
 #include "config.hpp"
 
 #ifdef DP3M
+#include "Particle.hpp"
 #include "electrostatics_magnetostatics/dipole.hpp"
 #include "fft.hpp"
 #include "p3m-common.hpp"
-#include "particle_data.hpp"
+#include "p3m_send_mesh.hpp"
 
 #include <ParticleRange.hpp>
 #include <utils/constants.hpp>
@@ -58,9 +56,9 @@ struct dp3m_data_struct {
   /** real space mesh (local) for CA/FFT.*/
   double *rs_mesh;
   /** real space mesh (local) for CA/FFT of the dipolar field.*/
-  double *rs_mesh_dip[3];
+  std::array<std::vector<double>, 3> rs_mesh_dip;
   /** k-space mesh (local) for k-space calculation and FFT.*/
-  double *ks_mesh;
+  std::vector<double> ks_mesh;
 
   /** number of dipolar particles (only on master node). */
   int sum_dip_part;
@@ -68,38 +66,33 @@ struct dp3m_data_struct {
   double sum_mu2;
 
   /** interpolation of the charge assignment function. */
-  double *int_caf[7];
+  std::vector<std::vector<double>> int_caf{7};
 
   /** position shift for calc. of first assignment mesh point. */
   double pos_shift;
   /** help variable for calculation of aliasing sums */
-  double *meshift;
+  std::vector<double> meshift;
 
   /** Spatial differential operator in k-space. We use an i*k differentiation.
    */
-  double *d_op;
+  std::vector<double> d_op;
   /** Force optimised influence function (k-space) */
-  double *g_force;
+  std::vector<double> g_force;
   /** Energy optimised influence function (k-space) */
-  double *g_energy;
+  std::vector<double> g_energy;
 
   /** number of charged particles on the node. */
   int ca_num;
 
   /** Charge fractions for mesh assignment. */
-  double *ca_frac;
+  std::vector<double> ca_frac;
   /** index of first mesh point for charge assignment. */
-  int *ca_fmp;
+  std::vector<int> ca_fmp;
   /** number of permutations in k_space */
   int ks_pnum;
 
   /** send/recv mesh sizes */
   p3m_send_mesh sm;
-
-  /** Field to store grid points to send. */
-  double *send_grid;
-  /** Field to store grid points to recv */
-  double *recv_grid;
 
   /* Stores the value of the energy correction due to MS effects */
   double energy_correction;
@@ -163,10 +156,10 @@ void dp3m_deactivate();
  *  These parameters are stored in the @ref dp3m object.
  *
  *  The function utilizes the analytic expression of the error estimate
- *  for the dipolar P3M method in the paper of J. J. Cerda et al., JCP 2008 in
+ *  for the dipolar P3M method in the paper of @cite cerda08d in
  *  order to obtain the rms error in the force for a system of N randomly
- *  distributed particles in a cubic box.
- *  For the real space error the estimate of Kolafa/Perram is used.
+ *  distributed particles in a cubic box. For the real space error, the
+ *  estimate in @cite kolafa92a is used.
  *
  *  Parameter ranges if not given explicit values via dp3m_set_tune_params():
  *  - @p mesh is set up such that the number of mesh points is equal to the

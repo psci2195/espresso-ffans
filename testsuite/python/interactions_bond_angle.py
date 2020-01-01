@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -19,7 +19,6 @@
 import espressomd
 import numpy as np
 import unittest as ut
-import unittest_decorators as utx
 
 
 class InteractionsAngleBondTest(ut.TestCase):
@@ -129,7 +128,7 @@ class InteractionsAngleBondTest(ut.TestCase):
             # No pressure (isotropic compression preserves angles)
             self.assertAlmostEqual(
                 self.system.analysis.pressure()["bonded"], 0, delta=1E-12)
-            # Stress tensor trace=0 (isotropic compression preserves angles, 
+            # Stress tensor trace=0 (isotropic compression preserves angles,
             # consistency with pressure)
             self.assertAlmostEqual(
                 np.trace(self.system.analysis.stress_tensor()["bonded"]), 0, delta=1E-12)

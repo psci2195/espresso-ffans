@@ -1,27 +1,24 @@
 /*
-  Copyright (C) 2016-2018 The ESPResSo project
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/** \file
- * Unit tests for the MpiCallbacks class.
+ * Copyright (C) 2016-2019 The ESPResSo project
+ *   Max-Planck-Institute for Polymer Research, Theory Group
  *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* Unit tests for the MpiCallbacks class. */
 
 #define BOOST_TEST_NO_MAIN
 #define BOOST_TEST_MODULE MpiCallbacks test
@@ -41,21 +38,21 @@ static bool called = false;
 BOOST_AUTO_TEST_CASE(invoke_test) {
   using Communication::detail::invoke;
 
-  auto f = [](int i, double d) { return i + d; };
+  auto f = [](int i, unsigned j) { return i + j; };
 
   boost::mpi::communicator world;
   boost::mpi::packed_oarchive::buffer_type buff;
 
   auto const i = 123;
-  auto const d = 3.1415;
-  boost::mpi::packed_oarchive(world, buff) << i << d;
+  auto const j = 456u;
+  boost::mpi::packed_oarchive(world, buff) << i << j;
 
   boost::mpi::packed_iarchive ia(world, buff);
 
-  BOOST_CHECK_EQUAL(f(i, d), (invoke<decltype(f), int, double>(f, ia)));
+  BOOST_CHECK_EQUAL(f(i, j), (invoke<decltype(f), int, unsigned>(f, ia)));
 }
 
-/**
+/*
  * Test that the implementation of callback_model_t
  * correctly deserialize the parameters and call
  * the callback with them.

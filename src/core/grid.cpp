@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /** \file
  *  Domain decomposition for parallel computing.
  *
@@ -67,14 +67,7 @@ Utils::Vector3i calc_node_pos(const boost::mpi::communicator &comm) {
 
 Utils::Vector<int, 6>
 calc_node_neighbors(const boost::mpi::communicator &comm) {
-  using std::get;
-  using Utils::Mpi::cart_shift;
-
-  return {
-      get<1>(cart_shift(comm, 0, -1)), get<1>(cart_shift(comm, 0, +1)),
-      get<1>(cart_shift(comm, 1, -1)), get<1>(cart_shift(comm, 1, +1)),
-      get<1>(cart_shift(comm, 2, -1)), get<1>(cart_shift(comm, 2, +1)),
-  };
+  return Utils::Mpi::cart_neighbors<3>(comm);
 }
 
 LocalBox<double> regular_decomposition(const BoxGeometry &box,

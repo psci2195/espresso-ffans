@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -27,7 +27,7 @@ foreach(auxfile ${python_AUX})
   file(RELATIVE_PATH relpath ${CMAKE_CURRENT_SOURCE_DIR} ${auxfile})
   get_filename_component(relpath ${relpath} DIRECTORY)
   string(CONCAT outputpath ${CMAKE_CURRENT_BINARY_DIR} "/" ${relpath} "/" ${filename})
-  add_custom_command(TARGET object_in_fluid 
+  add_custom_command(TARGET object_in_fluid
                      COMMAND ${CMAKE_COMMAND} -E
                        copy ${auxfile} ${outputpath}
                     )

@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /** \file
  *  Implementation of \ref thermostat.hpp.
  */
@@ -35,18 +35,14 @@
 #include <iostream>
 #include <unistd.h>
 
-/** thermostat switch */
 int thermo_switch = THERMO_OFF;
-/** Temperature */
 double temperature = 0.0;
-
-/** True if the thermostat should act on virtual particles. */
 bool thermo_virtual = true;
 
 using Thermostat::GammaType;
 
 namespace {
-/** @name Langevin parameters sentinel
+/** @name Langevin parameters sentinels.
  *  These functions return the sentinel value for the Langevin
  *  parameters, indicating that they have not been set yet.
  */
@@ -56,11 +52,7 @@ Utils::Vector3d sentinel(Utils::Vector3d) { return {-1.0, -1.0, -1.0}; }
 /*@}*/
 } // namespace
 
-/* LANGEVIN THERMOSTAT */
-
-/** Langevin friction coefficient gamma for translation. */
 GammaType langevin_gamma = sentinel(GammaType{});
-/** Friction coefficient gamma for rotation. */
 GammaType langevin_gamma_rotation = sentinel(GammaType{});
 GammaType langevin_pref1;
 GammaType langevin_pref2;
@@ -160,45 +152,4 @@ void thermo_init() {
   if (thermo_switch & THERMO_NPT_ISO)
     thermo_init_npt_isotropic();
 #endif
-}
-
-void langevin_heat_up() {
-  langevin_pref2_buffer = langevin_pref2;
-  langevin_pref2 *= sqrt(3);
-
-  langevin_pref2_rotation_buffer = langevin_pref2_rotation;
-  langevin_pref2_rotation *= sqrt(3);
-}
-
-void thermo_heat_up() {
-  if (thermo_switch & THERMO_LANGEVIN) {
-    langevin_heat_up();
-  }
-#ifdef DPD
-  if (thermo_switch & THERMO_DPD) {
-    dpd_heat_up();
-  }
-#endif
-  if (n_thermalized_bonds) {
-    thermalized_bond_heat_up();
-  }
-}
-
-void langevin_cool_down() {
-  langevin_pref2 = langevin_pref2_buffer;
-  langevin_pref2_rotation = langevin_pref2_rotation_buffer;
-}
-
-void thermo_cool_down() {
-  if (thermo_switch & THERMO_LANGEVIN) {
-    langevin_cool_down();
-  }
-#ifdef DPD
-  if (thermo_switch & THERMO_DPD) {
-    dpd_cool_down();
-  }
-#endif
-  if (n_thermalized_bonds) {
-    thermalized_bond_cool_down();
-  }
 }

@@ -1,20 +1,38 @@
+/*
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "cuda_wrapper.hpp"
 
 // *******
 // This is an internal file of the IMMERSED BOUNDARY implementation
-// It should not be included by any main Espresso routines
-// Functions to be exported for Espresso are in ibm_main.hpp
+// It should not be included by any main ESPResSo routines
+// Functions to be exported for ESPResSo are in ibm_main.hpp
 
 #include "config.hpp"
 
 #if defined(VIRTUAL_SITES_INERTIALESS_TRACERS) && defined(CUDA)
 
+#include "Particle.hpp"
 #include "cuda_interface.hpp"
 #include "cuda_utils.hpp"
 #include "grid_based_algorithms/lb_boundaries.hpp"
 #include "grid_based_algorithms/lbgpu.cuh"
 #include "grid_based_algorithms/lbgpu.hpp"
-#include "particle_data.hpp"
 #include "virtual_sites/lb_inertialess_tracers.hpp"
 #include "virtual_sites/lb_inertialess_tracers_cuda_interface.hpp"
 
@@ -50,16 +68,12 @@ extern LB_node_force_density_gpu node_f;
 extern LB_nodes_gpu *current_nodes;
 
 // ** These variables are static in lbgpu_cuda.cu, so we need to duplicate them
-// here They are initialized in ForcesIntoFluid The pointers are on the host,
-// but point into device memory
+// here. They are initialized in ForcesIntoFluid. The pointers are on the host,
+// but point into device memory.
 LB_parameters_gpu *para_gpu = nullptr;
 float *lb_boundary_velocity_IBM = nullptr;
 
-/****************
-   IBM_ResetLBForces_GPU
-Calls a kernel to reset the forces on the LB nodes to the external force
-*****************/
-
+/** Call a kernel to reset the forces on the LB nodes to the external force. */
 void IBM_ResetLBForces_GPU() {
   if (this_node == 0) {
     // Setup for kernel call
@@ -75,13 +89,11 @@ void IBM_ResetLBForces_GPU() {
   }
 }
 
-/******************
-   IBM_ForcesIntoFluid_GPU
-Called from integrate_vv to put the forces into the fluid
-This must be the first CUDA-IBM function to be called because it also does some
-initialization
-*******************/
-
+/** Transfer particle forces into the LB fluid.
+ *  Called from @ref integrate_vv.
+ *  This must be the first CUDA-IBM function to be called because it also does
+ *  some initialization.
+ */
 void IBM_ForcesIntoFluid_GPU(ParticleRange particles) {
   // This function does
   // (1) Gather forces from all particles via MPI
@@ -124,10 +136,6 @@ void IBM_ForcesIntoFluid_GPU(ParticleRange particles) {
                node_f, para_gpu);
   }
 }
-
-/***************
-   InitCUDA_IBM
-***************/
 
 void InitCUDA_IBM(const int numParticles) {
 
@@ -190,12 +198,11 @@ void InitCUDA_IBM(const int numParticles) {
   }
 }
 
-/**************
-   Calc_m_from_n_IBM
-This is our own version of the calc_m_from_n function in lbgpu_cuda.cu
-It does exactly the same, but calculates only the first four modes
-***************/
-
+/** @copybrief calc_m_from_n
+ *
+ *  This is a re-implementation of @ref calc_m_from_n. It does exactly the
+ *  same, but calculates only the first four modes.
+ */
 __device__ void Calc_m_from_n_IBM(const LB_nodes_gpu n_a,
                                   const unsigned int index, float *mode,
                                   const LB_parameters_gpu *const paraP) {
@@ -257,12 +264,9 @@ __device__ void Calc_m_from_n_IBM(const LB_nodes_gpu n_a,
              n_a.vd[18 * para.number_of_nodes + index]);
 }
 
-/**************
-   ParticleVelocitiesFromLB_GPU
-Calls a kernel function to interpolate the velocity at each IBM particle's
-position Store velocity in the particle data structure
-**************/
-
+/** Call a kernel function to interpolate the velocity at each IBM particle's
+ *  position. Store velocity in the particle data structure.
+ */
 void ParticleVelocitiesFromLB_GPU(ParticleRange particles) {
   // This function performs three steps:
   // (1) interpolate velocities on GPU
@@ -299,10 +303,6 @@ void ParticleVelocitiesFromLB_GPU(ParticleRange particles) {
   // Spread using MPI
   IBM_cuda_mpi_send_velocities(particles);
 }
-
-/***************
-   ForcesIntoFluid_Kernel
-****************/
 
 __global__ void
 ForcesIntoFluid_Kernel(const IBM_CUDA_ParticleDataInput *const particle_input,
@@ -388,10 +388,6 @@ ForcesIntoFluid_Kernel(const IBM_CUDA_ParticleDataInput *const particle_input,
     }
   }
 }
-
-/**************
-   ParticleVelocitiesFromLB_Kernel
-**************/
 
 __global__ void ParticleVelocitiesFromLB_Kernel(
     LB_nodes_gpu n_curr,
@@ -513,10 +509,6 @@ __global__ void ParticleVelocitiesFromLB_Kernel(
     particles_output[particleIndex].v[2] = v[2] * para.agrid / para.tau;
   }
 }
-
-/****************
-   ResetLBForces_Kernel
-*****************/
 
 __global__ void ResetLBForces_Kernel(LB_node_force_density_gpu node_f,
                                      const LB_parameters_gpu *const paraP) {

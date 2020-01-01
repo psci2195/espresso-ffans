@@ -1,33 +1,35 @@
 /*
-  Copyright (C) 2012-2018 The ESPResSo project
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2012-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef _OBJECT_IN_FLUID_OIF_LOCAL_FORCES_H
 #define _OBJECT_IN_FLUID_OIF_LOCAL_FORCES_H
 
 /** \file
- *  Routines to calculate the OIF local forces
- *  for a particle quadruple (two neighboring triangles with common edge).
- * (Dupin2007) \ref forces.cpp
+ *  Routines to calculate the OIF local forces for a particle quadruple
+ *  (two neighboring triangles with common edge).
+ *  See @cite dupin07a.
+ *
+ *  Implementation in \ref oif_local_forces.cpp
  */
 
+#include "Particle.hpp"
 #include "bonded_interactions/bonded_interaction_data.hpp"
 #include "grid.hpp"
-#include "particle_data.hpp"
 #include <utils/Vector.hpp>
 #include <utils/math/triangle_functions.hpp>
 
@@ -37,13 +39,15 @@ int oif_local_forces_set_params(int bond_type, double r0, double ks,
                                 double A01, double A02, double kal,
                                 double kvisc);
 
-inline double KS(double lambda) { // Defined by (19) from Dupin2007
+/** @details see eq. (19) in @cite dupin07a */
+inline double KS(double lambda) {
   double res;
   res = (pow(lambda, 0.5) + pow(lambda, -2.5)) / (lambda + pow(lambda, -3.));
   return res;
 }
 
-/** Compute the OIF local forces (Dupin2007).
+/** Compute the OIF local forces.
+ *  See @cite dupin07a, @cite jancigova16a.
  *  @param p2           %Particle of triangle 1.
  *  @param p1 , p3      Particles common to triangle 1 and triangle 2.
  *  @param p4           %Particle of triangle 2.
@@ -147,16 +151,11 @@ calc_oif_local(Particle const &p2, Particle const &p1, Particle const &p3,
   }
 
   /* local area
-     for both triangles
-     only 1/3 of calculated forces are added, because each triangle will enter
-     this calculation 3 times (one time per edge)
-
-              Proportional distribution of forces, implemented according to the
-     article I.Jancigova, I.Cimrak, Non-uniform force allocation for area
-     preservation in spring network models, International Journal for Numerical
-     Methods in Biomedical Engineering, DOI: 10.1002/cnm.2757
-
-  */
+   * for both triangles, only 1/3 of calculated forces are added, because each
+   * triangle will enter this calculation 3 times (one time per edge).
+   * Proportional distribution of forces, implemented according to
+   * @cite jancigova16a.
+   */
   if (iaparams.p.oif_local_forces.kal > TINY_OIF_ELASTICITY_COEFFICIENT) {
 
     auto handle_triangle = [](double kal, double A0, Utils::Vector3d const &fp1,

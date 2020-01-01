@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -32,7 +32,7 @@ class ThereCanOnlyBeOne(BaseException):
 def highlander(klass):
     klass.highlander_created = False
 
-    def cls_init(self, *args, **kwargs):
+    def cls_init(self, *args, **kwargs):  # pylint: disable=unused-argument
         "__init__ method by the highlander decorator."
         if self.__class__.highlander_created:
             raise ThereCanOnlyBeOne(self.__class__)

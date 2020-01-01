@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef UTILS_MPI_CART_COMM_HPP
 #define UTILS_MPI_CART_COMM_HPP
 
@@ -79,6 +97,29 @@ inline std::pair<int, int> cart_shift(boost::mpi::communicator const &comm,
                          (comm, direction, displacement, &src, &dst))
 
   return {src, dst};
+}
+
+/**
+ * @brief Calculates the numbers of the nearest neighbors for a node.
+ *
+ * @tparam dim Dimension of the communicator
+ * @param comm Cartesian communicator
+ *
+ * @return Ranks of 2*dim neighbors
+ */
+template <size_t dim>
+Utils::Vector<int, 2 * dim>
+cart_neighbors(const boost::mpi::communicator &comm) {
+  using std::get;
+
+  Vector<int, 2 * dim> ret;
+
+  for (size_t i = 0; i < dim; i++) {
+    ret[2 * i + 0] = get<1>(cart_shift(comm, i, -1));
+    ret[2 * i + 1] = get<1>(cart_shift(comm, i, +1));
+  }
+
+  return ret;
 }
 } // namespace Mpi
 } // namespace Utils

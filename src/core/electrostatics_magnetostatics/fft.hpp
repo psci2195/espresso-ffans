@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2010-2018 The ESPResSo project
-  Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef _FFT_H
 #define _FFT_H
 /** \file
@@ -87,13 +87,13 @@ struct fft_forw_plan {
   void (*pack_function)(double const *const, double *const, int const *,
                         int const *, int const *, int);
   /** Send block specification. 6 integers for each node: start[3], size[3]. */
-  int *send_block = nullptr;
+  std::vector<int> send_block;
   /** Send block communication sizes. */
-  int *send_size = nullptr;
+  std::vector<int> send_size;
   /** Recv block specification. 6 integers for each node: start[3], size[3]. */
-  int *recv_block = nullptr;
+  std::vector<int> recv_block;
   /** Recv block communication sizes. */
-  int *recv_size = nullptr;
+  std::vector<int> recv_size;
   /** size of send block elements. */
   int element;
 };
@@ -133,9 +133,9 @@ struct fft_data_struct {
   int max_mesh_size = 0;
 
   /** send buffer. */
-  double *send_buf = nullptr;
+  std::vector<double> send_buf;
   /** receive buffer. */
-  double *recv_buf = nullptr;
+  std::vector<double> recv_buf;
   /** Buffer for receive data. */
   double *data_buf = nullptr;
 };

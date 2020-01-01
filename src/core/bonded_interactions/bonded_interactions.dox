@@ -1,21 +1,21 @@
 /*
-  Copyright (C) 2019 The ESPResSo project
-
-  This file is part of ESPResSo.
-
-  ESPResSo is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  ESPResSo is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 /** @page bondedIA Bonded interactions
  *
@@ -210,9 +210,7 @@
  *
  *  @subsection bondedIA_angle_force General expressions for the forces
  *
- *  This section uses the particle force expressions derived in
- *  Swope, Ferguson *J. Comput. Chem.* **1992**, *13*(5): 585-594,
- *  doi:[10.1002/jcc.540130508](https://doi.org/10.1002/jcc.540130508).
+ *  This section uses the particle force expressions derived in @cite swope92a.
  *
  *  The gradient of the potential at particle @f$ i @f$ is given by the chain
  *  rule in equation 6:

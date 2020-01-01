@@ -1,23 +1,23 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
-    Max-Planck-Institute for Polymer Research, Theory Group
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ * Copyright (C) 2002,2003,2004,2005,2006,2007,2008,2009,2010
+ *   Max-Planck-Institute for Polymer Research, Theory Group
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "metadynamics.hpp"
 #include "cells.hpp"
@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /** \file
  *
- *  This file contains routines to perform metadynamics.  Right now, the
+ *  This file contains routines to perform metadynamics. Right now, the
  *  reaction coordinate is defined between two particles (either distance
  *  or z-projected distance). Note that these
  *  particles can be virtual sites, in order to handle molecules.
@@ -99,7 +99,7 @@ void meta_init() {
 
 /** Metadynamics main function:
  * - Calculate reaction coordinate
- * - Update profile and biased force
+ * - Update profile and biased force @cite marsili10a
  * - apply external force
  */
 void meta_perform(const ParticleRange &particles) {
@@ -143,8 +143,7 @@ void meta_perform(const ParticleRange &particles) {
   }
 
   /* Now update free energy profile
-   * Here, we're following the functional form of
-   * Marsili et al., J Comp Chem, 31 (2009).
+   * Here, we're following the functional form of @cite marsili10a.
    * Instead of Gaussians, we use so-called Lucy's functions */
 
   for (int i = 0; i < meta_xi_num_bins; ++i) {

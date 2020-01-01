@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 The ESPResSo project
+# Copyright (C) 2013-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -17,7 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 from collections import OrderedDict
-import sys
 import inspect
 import os
 import re
@@ -97,7 +96,6 @@ class Checkpoint:
 
         """
         names = name.split('.')
-        tmp_obj = obj
         for i in range(len(names) - 1):
             obj = getattr(obj, names[i], None)
 
@@ -173,8 +171,9 @@ class Checkpoint:
 
         Returns
         -------
-        bool
-            True if any checkpoints exist that match checkpoint_id and checkpoint_path otherwise False.
+        :obj:`bool`
+            ``True`` if any checkpoints exist that match ``checkpoint_id`` and
+            ``checkpoint_path`` otherwise ``False``.
 
         """
         return self.counter > 0
@@ -220,7 +219,7 @@ class Checkpoint:
         Parameters
         ----------
         checkpoint_index : :obj:`int`, optional
-            If not given, the latest checkpoint_index will be used.
+            If not given, the last ``checkpoint_index`` will be used.
 
         """
         if checkpoint_index is None:
@@ -236,7 +235,7 @@ class Checkpoint:
                 self.calling_module, key, checkpoint_data[key])
             self.checkpoint_objects.append(key)
 
-    def __signal_handler(self, signum, frame):
+    def __signal_handler(self, signum, frame):  # pylint: disable=unused-argument
         """
         Will be called when a registered signal was sent.
 

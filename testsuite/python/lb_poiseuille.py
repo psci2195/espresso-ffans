@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -24,7 +24,7 @@ import espressomd.shapes
 
 
 """
-Check the Lattice Boltzmann 'pressure' driven flow in a slab system
+Check the lattice-Boltzmann 'pressure' driven flow in a slab system
 by comparing to the analytical solution.
 
 """

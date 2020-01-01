@@ -1,21 +1,21 @@
 /*
-Copyright (C) 2010-2018 The ESPResSo project
-
-This file is part of ESPResSo.
-
-ESPResSo is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-ESPResSo is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ * Copyright (C) 2010-2019 The ESPResSo project
+ *
+ * This file is part of ESPResSo.
+ *
+ * ESPResSo is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ESPResSo is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include "immersed_boundary/ibm_tribend.hpp"
 
@@ -87,6 +87,7 @@ IBM_Tribend_CalcForce(Particle const &p1, Particle const &p2,
   return std::make_tuple(force1, force2, force3, force4);
 }
 
+/** @details See @cite gompper96a and @cite kruger12a. */
 int IBM_Tribend_SetParams(const int bond_type, const int ind1, const int ind2,
                           const int ind3, const int ind4, const double kb,
                           const bool flat) {
@@ -143,8 +144,8 @@ int IBM_Tribend_SetParams(const int bond_type, const int ind1, const int ind2,
     bonded_ia_params[bond_type].p.ibm_tribend.theta0 = theta0;
     // NOTE: This is the bare bending modulus used by the program.
     // If triangle pairs appear only once, the total bending force should get a
-    // factor 2 For the numerical model, a factor sqrt(3) should be added, see
-    // Gompper&Kroll J. Phys. 1996 and Krüger thesis This is an approximation,
+    // factor 2. For the numerical model, a factor sqrt(3) should be added, see
+    // @cite gompper96a and @cite kruger12a. This is an approximation,
     // it holds strictly only for a sphere
     bonded_ia_params[bond_type].p.ibm_tribend.kb = kb;
   }

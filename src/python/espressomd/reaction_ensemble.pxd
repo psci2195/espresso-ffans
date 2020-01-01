@@ -1,3 +1,19 @@
+# Copyright (C) 2010-2019 The ESPResSo project
+#
+# This file is part of ESPResSo.
+#
+# ESPResSo is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# ESPResSo is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 include "myconfig.pxi"
 
 from libcpp cimport bool
@@ -26,6 +42,7 @@ cdef extern from "reaction_ensemble.hpp" namespace "ReactionEnsemble":
         double get_acceptance_rate_configurational_moves()
         int delete_particle(int p_id)
         void add_reaction(double gamma, vector[int] _reactant_types, vector[int] _reactant_coefficients, vector[int] _product_types, vector[int] _product_coefficients) except +
+        void delete_reaction(int reaction_id)
 
         vector[SingleReaction] reactions
         int nr_different_types
@@ -69,4 +86,4 @@ cdef extern from "reaction_ensemble.hpp" namespace "ReactionEnsemble":
 
     cdef cppclass CWidomInsertion "ReactionEnsemble::WidomInsertion"(CReactionAlgorithm):
         CWidomInsertion(int seed)
-        pair[double, double] measure_excess_chemical_potential(int reaction_id)
+        pair[double, double] measure_excess_chemical_potential(int reaction_id) except +

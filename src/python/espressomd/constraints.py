@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2018 The ESPResSo project
+# Copyright (C) 2010-2019 The ESPResSo project
 #
 # This file is part of ESPResSo.
 #
@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from .script_interface import ScriptObjectRegistry, ScriptInterfaceHelper, script_interface_register
-from espressomd.utils import is_valid_type
 import numpy as np
 from itertools import product
 
@@ -102,7 +101,7 @@ class ShapeBasedConstraint(Constraint):
     only_positive : :obj:`bool`
         Act only in the direction of positive normal,
         only useful if penetrable is ``True``.
-    particle_type : int
+    particle_type : :obj:`int`
         Interaction type of the constraint.
     particle_velocity : array_like of :obj:`float`
         Interaction velocity of the boundary
