@@ -476,8 +476,10 @@ void propagate_vel_finalize_p_inst(bool end_flag) {
 #endif
 #ifdef BROWNIAN_DYNAMICS
     if (thermo_switch & THERMO_BROWNIAN) {
+#ifndef FORCE_EM_BROWNIAN_DYNAMICS
       bd_drag_vel(p, 0.5 * time_step);
       bd_random_walk_vel(p, 0.5 * time_step);
+#endif // FORCE_EM_BROWNIAN_DYNAMICS
     } else if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ
                 | THERMO_EB_VELPOS)) {
       bd_drag_vel(p, 0.0);
@@ -655,7 +657,11 @@ void propagate_vel() {
     propagate_omega_quat_particle(&p);
 #ifdef BROWNIAN_DYNAMICS
     if (thermo_switch & THERMO_BROWNIAN) {
+#ifndef FORCE_EM_BROWNIAN_DYNAMICS
       bd_vel_steps_rot(p, 0.5 * time_step);
+#else
+      bd_vel_steps_rot(p, time_step);
+#endif // FORCE_EM_BROWNIAN_DYNAMICS
     } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
       // In contrast to the BD, the previous step velocity is kept!
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
@@ -679,7 +685,11 @@ void propagate_vel() {
 #endif
 #ifdef BROWNIAN_DYNAMICS
     if (thermo_switch & THERMO_BROWNIAN) {
+#ifndef FORCE_EM_BROWNIAN_DYNAMICS
       bd_vel_steps_tran(p, 0.5 * time_step);
+#else
+      bd_vel_steps_tran(p, time_step);
+#endif // FORCE_EM_BROWNIAN_DYNAMICS
     } else if (thermo_switch & THERMO_ERMAK_BUCKHOLZ) {
       // In contrast to the BD, the previous step velocity is kept!
       // dt->0+ limit evaluation of eq. (8a-b) of Ermak1980
@@ -795,7 +805,11 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
     propagate_omega_quat_particle(&p);
 #ifdef BROWNIAN_DYNAMICS
     if (thermo_switch & THERMO_BROWNIAN) {
+#ifndef FORCE_EM_BROWNIAN_DYNAMICS
       bd_vel_steps_rot(p, 0.5 * time_step);
+#else
+      bd_vel_steps_rot(p, time_step);
+#endif // FORCE_EM_BROWNIAN_DYNAMICS
     }
       else if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ
                 | THERMO_EB_VELPOS)) {
@@ -823,7 +837,11 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
 #endif
 #ifdef BROWNIAN_DYNAMICS
     if (thermo_switch & THERMO_BROWNIAN) {
+#ifndef FORCE_EM_BROWNIAN_DYNAMICS
       bd_vel_steps_tran(p, 0.5 * time_step);
+#else
+      bd_vel_steps_tran(p, time_step);
+#endif // FORCE_EM_BROWNIAN_DYNAMICS
     } else if (thermo_switch & (THERMO_ERMAK_BUCKHOLZ
                 | THERMO_EB_VELPOS)) {
       // In contrast to the BD, the previous step velocity is kept!

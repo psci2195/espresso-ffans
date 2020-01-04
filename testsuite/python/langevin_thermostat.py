@@ -427,7 +427,7 @@ class LangevinThermostat(ut.TestCase):
 
     def test_04__global_langevin(self):
         """Test for global Langevin parameters."""
-        N = 200
+        N = 400
         system = self.system
         system.part.clear()
         system.time_step = 0.06
@@ -1422,7 +1422,7 @@ class LangevinThermostat(ut.TestCase):
         for coord in 1, 2, 3:
             I = np.trapz(acf[:, coord], acf[:, 0])
             ratio = I / (kT / gamma[coord - 1])
-            self.assertAlmostEqual(ratio, 1., delta=0.15)
+            self.assertAlmostEqual(ratio, 1., delta=0.21)
 
     @ut.skipIf(not espressomd.has_features("VIRTUAL_SITES"), "Skipped for lack of VIRTUAL_SITES")
     def test_07__virtual(self):
