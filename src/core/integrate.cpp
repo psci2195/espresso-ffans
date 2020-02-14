@@ -714,7 +714,7 @@ void propagate_vel() {
 #endif
 #ifdef BROWNIAN_DYNAMICS
             if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-                  | THERMO_EB_VELPOS | THERMO_LTID)))
+                  | THERMO_EB_VELPOS | THERMO_LTID | THERMO_IBD)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * a(t) */
@@ -767,7 +767,7 @@ void propagate_pos() {
       } else if (thermo_switch & THERMO_EB_VELPOS) {
         bd_vel_steps_tran(p, time_step);
         bd_pos_steps_tran(p, time_step);
-      } else if (thermo_switch & THERMO_LTID) {
+      } else if (thermo_switch & (THERMO_LTID | THERMO_IBD)) {
         bd_pos_steps_tran(p, time_step);
         bd_vel_steps_tran(p, time_step);
       }
@@ -862,7 +862,7 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
     } else if (thermo_switch & THERMO_EB_VELPOS) {
       bd_vel_steps_tran(p, time_step);
       bd_pos_steps_tran(p, time_step);
-    } else if (thermo_switch & THERMO_LTID) {
+    } else if (thermo_switch & (THERMO_LTID | THERMO_IBD)) {
       bd_pos_steps_tran(p, time_step);
       bd_vel_steps_tran(p, time_step);
     } else if (thermo_switch & THERMO_LI) {
@@ -1086,7 +1086,7 @@ int integrate_set_npt_isotropic(double ext_pressure, double piston, int xdir,
  */
 void bd_vel_steps_tran(Particle &p, double dt, bool start_flag, bool end_flag) {
   if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-      | THERMO_EB_VELPOS | THERMO_LI)) {
+      | THERMO_EB_VELPOS | THERMO_LI | THERMO_LTID | THERMO_IBD)) {
     bd_drag_vel(p, dt, start_flag, end_flag);
     bd_random_walk_vel(p, dt, start_flag, end_flag);
   }
@@ -1116,7 +1116,7 @@ void bd_vel_steps_rot(Particle &p, double dt) {
  */
 void bd_pos_steps_tran(Particle &p, double dt) {
   if (thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-      | THERMO_EB_VELPOS | THERMO_LI)) {
+      | THERMO_EB_VELPOS | THERMO_LI | THERMO_LTID | THERMO_IBD)) {
     bd_drag(p, dt);
     bd_random_walk(p, dt);
   }
@@ -1274,6 +1274,18 @@ void bd_random_walk(Particle &p, double dt) {
           delta_pos_body[j] = 
             (1. / brown_sigma_pos_temp_inv_local) *
             (sqrt(dt) - (1. - exp(-beta * dt)) / (beta * sqrt(dt)));
+        } else {
+          delta_pos_body[j] = 0.;
+        }
+      } else if (thermo_switch & THERMO_IBD) {
+        if (brown_sigma_pos_temp_inv_local > 0.0) {
+          /*delta_pos_body[j] = 
+            (1. / brown_sigma_pos_temp_inv_local) *
+            (sqrt(dt) - 1. / (beta * sqrt(dt)));*/
+          // The IBD definition meands beta * dt -> inf
+          delta_pos_body[j] = 
+            (1. / brown_sigma_pos_temp_inv_local) *
+            (sqrt(dt));
         } else {
           delta_pos_body[j] = 0.;
         }

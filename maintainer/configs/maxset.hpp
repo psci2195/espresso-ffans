@@ -47,6 +47,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define ERMAK_BUCKHOLZ
 #define LANGEVIN_IMPULSE
 #define LTID
+#define IBD
 
 #ifdef CUDA
 #define LB_BOUNDARIES_GPU

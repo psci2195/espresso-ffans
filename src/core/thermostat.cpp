@@ -278,6 +278,12 @@ void thermo_init_ltid() {
 }
 #endif
 
+#ifdef IBD
+void thermo_init_ibd() {
+  thermo_init_brownian();
+}
+#endif
+
 void thermo_init() {
 
   // Init thermalized bond despite of thermostat
@@ -313,6 +319,10 @@ void thermo_init() {
 #ifdef LTID
   if (thermo_switch & THERMO_LTID)
     thermo_init_ltid();
+#endif
+#ifdef IBD
+  if (thermo_switch & THERMO_IBD)
+    thermo_init_ibd();
 #endif
 }
 
