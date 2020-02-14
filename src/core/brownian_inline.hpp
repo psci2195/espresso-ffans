@@ -84,6 +84,11 @@ inline void bd_drag(Particle &p, double dt) {
         double exp0;
         exp0 = exp(- beta * dt / 2.);
         p.r.p[j] += (1. - exp0 * exp0) * p.m.v[j] / (beta * exp0);
+      } else if ((thermo_switch & THERMO_LTID) && (dt > 0.)) {
+        double exp0;
+        exp0 = exp(- beta * dt);
+        p.r.p[j] += ((1. - exp0) / beta) *
+                    (p.m.v[j] - p.f.f[j] / (p.p.mass * beta));
       }
     }
   }
@@ -143,7 +148,11 @@ inline void bd_drag_vel(Particle &p, double dt, bool start_flag = false, bool en
         p.m.v0[j] = p.m.v[j];
         double tmp_exp = (1. - exp(-beta * dt));
         p.m.v[j] = p.m.v[j] * exp(-beta * dt) + (p.f.f[j] / (p.p.mass * beta)) * tmp_exp;
-      }  else if ((thermo_switch & THERMO_LI) && (dt > 0.)) {
+      } else if ((thermo_switch & THERMO_LTID) && (dt > 0.)) {
+        double exp0 = exp(- beta * dt);
+        p.m.v[j] = (p.f.f[j] / (p.p.mass * beta)) *
+                   (1 - exp0) + p.m.v[j] * exp0;
+      } else if ((thermo_switch & THERMO_LI) && (dt > 0.)) {
         double exp0 = exp(- beta * dt);
         double wplus = (exp0 - 1. + beta * dt) / (beta * dt * (1. - exp0));
         double wminus = 1. - wplus;
@@ -247,6 +256,10 @@ inline void bd_random_walk_vel(Particle &p, double dt, bool start_flag = false, 
       } else if ((thermo_switch & THERMO_EB_VELPOS) && (dt > 0.)) {
         double tmp_exp2 = (1. - exp(-2. * beta * dt));
         p.m.v[j] += brown_sigma_vel_temp * noise[j] * sqrt(tmp_exp2 / p.p.mass);
+      } else if ((thermo_switch & THERMO_LTID) && (dt > 0.)) {
+        double exp0 = exp(- beta * dt);
+        p.m.v[j] += (sqrt(2. / dt) * brown_sigma_vel_temp * noise[j]) *
+                    (1. - exp0) / sqrt(beta * p.p.mass);
       } else if ((thermo_switch & THERMO_LI) && (dt > 0.)) {
         double R, alpha, betacorr, a, b, c, pref, wplus, wminus, exp0;
         exp0 = exp(- beta * dt);

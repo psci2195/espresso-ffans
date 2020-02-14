@@ -58,6 +58,7 @@
 #define THERMO_LI 128
 // the bit from THERMO_LI | next bit:
 #define THERMO_VGB82 384
+#define THERMO_LTID 512
 /*@}*/
 
 namespace Thermostat {

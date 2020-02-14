@@ -38,6 +38,7 @@ cdef extern from "thermostat.hpp":
     int THERMO_EB_VELPOS
     int THERMO_LI
     int THERMO_VGB82
+    int THERMO_LTID
 
     IF PARTICLE_ANISOTROPY:
         Vector3d langevin_gamma_rotation

@@ -30,6 +30,7 @@ BROWNIAN_DYNAMICS
 ERMAK_BUCKHOLZ                  implies BROWNIAN_DYNAMICS
 LANGEVIN_IMPULSE                implies BROWNIAN_DYNAMICS
 FORCE_EM_BROWNIAN_DYNAMICS      implies BROWNIAN_DYNAMICS
+LTID                            implies BROWNIAN_DYNAMICS
 
 /* Rotation */
 ROTATION

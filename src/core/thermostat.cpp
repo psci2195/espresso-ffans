@@ -272,6 +272,12 @@ void thermo_init_langevin_impulse() {
 }
 #endif
 
+#ifdef LTID
+void thermo_init_ltid() {
+  thermo_init_brownian();
+}
+#endif
+
 void thermo_init() {
 
   // Init thermalized bond despite of thermostat
@@ -304,6 +310,10 @@ void thermo_init() {
   if (thermo_switch & THERMO_LI)
     thermo_init_langevin_impulse();
 #endif // LANGEVIN_IMPULSE
+#ifdef LTID
+  if (thermo_switch & THERMO_LTID)
+    thermo_init_ltid();
+#endif
 }
 
 void langevin_heat_up() {

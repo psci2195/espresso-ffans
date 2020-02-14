@@ -714,7 +714,7 @@ void propagate_vel() {
 #endif
 #ifdef BROWNIAN_DYNAMICS
             if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-                  | THERMO_EB_VELPOS)))
+                  | THERMO_EB_VELPOS | THERMO_LTID)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * a(t) */
@@ -767,6 +767,9 @@ void propagate_pos() {
       } else if (thermo_switch & THERMO_EB_VELPOS) {
         bd_vel_steps_tran(p, time_step);
         bd_pos_steps_tran(p, time_step);
+      } else if (thermo_switch & THERMO_LTID) {
+        bd_pos_steps_tran(p, time_step);
+        bd_vel_steps_tran(p, time_step);
       }
 #endif // BROWNIAN_DYNAMICS
       for (int j = 0; j < 3; j++) {
@@ -776,7 +779,7 @@ void propagate_pos() {
         {
 #ifdef BROWNIAN_DYNAMICS
           if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-                | THERMO_EB_VELPOS)))
+                | THERMO_EB_VELPOS | THERMO_LTID)))
 #endif // BROWNIAN_DYNAMICS
           {
             /* Propagate positions (only NVT): p(t + dt)   = p(t) + dt *
@@ -859,6 +862,9 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
     } else if (thermo_switch & THERMO_EB_VELPOS) {
       bd_vel_steps_tran(p, time_step);
       bd_pos_steps_tran(p, time_step);
+    } else if (thermo_switch & THERMO_LTID) {
+      bd_pos_steps_tran(p, time_step);
+      bd_vel_steps_tran(p, time_step);
     } else if (thermo_switch & THERMO_LI) {
       bd_pos_steps_tran(p, time_step);
     }
@@ -1260,6 +1266,14 @@ void bd_random_walk(Particle &p, double dt) {
         if (brown_sigma_pos_temp_inv_local > 0.0) {
           delta_pos_body[j] = sqrt(dt - (2. / beta) * (1 - exp(-beta * dt)) / (1 + exp(-beta * dt)))
             / brown_sigma_pos_temp_inv_local;
+        } else {
+          delta_pos_body[j] = 0.;
+        }
+      } else if (thermo_switch & THERMO_LTID) {
+        if (brown_sigma_pos_temp_inv_local > 0.0) {
+          delta_pos_body[j] = 
+            (1. / brown_sigma_pos_temp_inv_local) *
+            (sqrt(dt) - (1. - exp(-beta * dt)) / (beta * sqrt(dt)));
         } else {
           delta_pos_body[j] = 0.;
         }
