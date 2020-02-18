@@ -103,8 +103,9 @@ void mpi_bcast_langevin_rng_counter(const uint64_t counter) {
 }
 
 void langevin_rng_counter_increment() {
-  //if (thermo_switch & (THERMO_LANGEVIN | THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-  //                      | THERMO_ERMAK_BUCKHOLZ))
+  if (thermo_switch & (THERMO_LANGEVIN | THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
+                        | THERMO_EB_VELPOS | THERMO_LI | THERMO_VGB82
+                        | THERMO_LTID | THERMO_IBD))
     langevin_rng_counter->increment();
 }
 
