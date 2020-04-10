@@ -876,7 +876,7 @@ void propagate_vel_pos(bool start_flag, bool end_flag) {
       {
 #ifdef BROWNIAN_DYNAMICS
         if (!(thermo_switch & (THERMO_BROWNIAN | THERMO_ERMAK_BUCKHOLZ
-            | THERMO_EB_VELPOS | THERMO_LI)))
+            | THERMO_EB_VELPOS | THERMO_LI | THERMO_LTID | THERMO_IBD)))
 #endif // BROWNIAN_DYNAMICS
         {
           /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5 * dt * a(t) */
