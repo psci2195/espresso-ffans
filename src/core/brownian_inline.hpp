@@ -266,11 +266,9 @@ inline void bd_random_walk_vel(Particle &p, double dt, bool start_flag = false, 
         p.m.v[j] += (sqrt(2. / dt) * brown_sigma_vel_temp * noise[j]) *
                     (1. - exp0) / sqrt(beta * p.p.mass);
       } else if ((thermo_switch & THERMO_IBD) && (dt > 0.)) {
-        //p.m.v[j] += (sqrt(2. / dt) * brown_sigma_vel_temp * noise[j]) *
-        //            1. / sqrt(beta * p.p.mass);
-        // Actually, beta * dt -> inf (BD essense) means zero here
-        // Hence, no real thermal contribution!
-        p.m.v[j] += 0.;
+        p.m.v[j] += (sqrt(2. / dt) * brown_sigma_vel_temp * noise[j]) *
+                    1. / sqrt(beta * p.p.mass);
+        //p.m.v[j] += 0.;
       } else if ((thermo_switch & THERMO_LI) && (dt > 0.)) {
         double R, alpha, betacorr, a, b, c, pref, wplus, wminus, exp0;
         exp0 = exp(- beta * dt);

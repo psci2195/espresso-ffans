@@ -1279,13 +1279,13 @@ void bd_random_walk(Particle &p, double dt) {
         }
       } else if (thermo_switch & THERMO_IBD) {
         if (brown_sigma_pos_temp_inv_local > 0.0) {
-          /*delta_pos_body[j] = 
-            (1. / brown_sigma_pos_temp_inv_local) *
-            (sqrt(dt) - 1. / (beta * sqrt(dt)));*/
-          // The IBD definition meands beta * dt -> inf
           delta_pos_body[j] = 
             (1. / brown_sigma_pos_temp_inv_local) *
-            (sqrt(dt));
+            (sqrt(dt) - 1. / (beta * sqrt(dt)));
+          // The IBD definition meands beta * dt -> inf
+          /*delta_pos_body[j] = 
+            (1. / brown_sigma_pos_temp_inv_local) *
+            (sqrt(dt));*/
         } else {
           delta_pos_body[j] = 0.;
         }
